@@ -15,9 +15,13 @@ enum Boolean {
     TRUE = 1
 };
 
+typedef struct Position {
+    int x;
+    int y;
+} Position;
+
 // Represents a single cell of snake body
-typedef struct SnakeBody
-{
+typedef struct SnakeBody {
     unsigned int posX;
     unsigned int posY; 
     void* next;
@@ -25,8 +29,7 @@ typedef struct SnakeBody
 
 
 // Represents a complete snake built from multiple Snake Bodies 
-typedef struct Snake
-{
+typedef struct Snake {
     unsigned int size;
     enum SnakeDirection direction;
     enum Boolean increase_length;

@@ -21,7 +21,11 @@ void handle_key_press();
 void change_snake_direction(enum SnakeDirection);
 void move_snake();
 void update_snake();
-void get_updated_vector(enum SnakeDirection, Vector2, Vector2*);
+void get_updated_vector(enum SnakeDirection, Position, Position*);
+void destroy_global_variables();
+int round_world_coordinates(int, int);
+void move_food_randomly();
+void draw_food();
 
 // old helper function defs
 void drawgrid(Color);
@@ -29,9 +33,12 @@ void drawWindowBoxMarker();
 void drawWindowBorder(Color);
 
 // GLOBALS
+Position g_food = {0,0};
 int g_screen_width = 1280;
 int g_screen_height = 720;
 int g_grid_size = 40;
+int g_vertical_grid_count;
+int g_horizontal_grid_count;
 double g_last_snake_movement_time = 0;
 double g_snake_movement_time = 0.5;
 
@@ -52,6 +59,7 @@ int main(void)
 #endif
 
     CloseWindow();
+    destroy_global_variables();
 
     return 0;
 }
@@ -72,11 +80,17 @@ void update_draw_frame(void)
         drawWindowBorder(ORANGE);
 
         draw_snake();
+        draw_food();
     
     EndDrawing();
 }
 
 // ====== HELPER FUNCTIONS ======
+
+// Free all malloced memory of snake
+void destroy_global_variables() {
+
+}
 
 // Paints a single body piece on grid
 void paint_snake_body_helper(SnakeBody* bodyToPaint) {
@@ -108,6 +122,14 @@ void initialize_global_variables() {
     head->posY = 0;
     SNAKE->head = head;
     SNAKE->tail = head;
+
+    // Vars
+    g_vertical_grid_count = g_screen_height/g_grid_size;
+    g_horizontal_grid_count = g_screen_width/g_grid_size;
+
+    // Food
+    srand(GetTime());
+    move_food_randomly();
 }
 
 // Checks if user input is received
@@ -128,6 +150,22 @@ void handle_key_press() {
     if (IsKeyPressed(KEY_E)) {
         SNAKE->increase_length = TRUE;
     }
+    if (IsKeyPressed(KEY_R)) {
+        move_food_randomly();
+    }
+}
+
+// Draws the food on scren
+void draw_food() {
+    Vector2 topLeft =  {40 * (g_food.x), 40 * (g_food.y)};
+    Vector2 size =  {40, 40};
+    DrawRectangleV(topLeft,size,RED);
+}
+
+// Places food at a random location on the map
+void move_food_randomly() {
+    g_food.x = rand() % g_horizontal_grid_count;
+    g_food.y = rand() % g_vertical_grid_count;
 }
 
 // changes  the direction of snake as given by enum 
@@ -147,15 +185,15 @@ void move_snake() {
 void update_snake() {
     
     SnakeBody* current = SNAKE->head;
-    Vector2 head_positon = {current->posX,current->posY};
-    Vector2* new_position = malloc(sizeof(struct Vector2));
+    Position head_positon = {current->posX,current->posY};
+    Position* new_position = malloc(sizeof(struct Position));
     get_updated_vector(SNAKE->direction,head_positon,new_position);
     for (size_t i = 0; i < SNAKE->size; i++)
     {   
-        Vector2 temporary = {current->posX,current->posY};
+        Position temporary = {current->posX,current->posY};
         
-        current->posX = new_position->x;
-        current->posY = new_position->y;
+        current->posX = round_world_coordinates(new_position->x,g_horizontal_grid_count);
+        current->posY = round_world_coordinates(new_position->y,g_vertical_grid_count);
         
         new_position->x = temporary.x;
         new_position->y = temporary.y;
@@ -184,9 +222,20 @@ void update_snake() {
     free(new_position);
 }
 
+// Returns the coordinate as if the world is a sphere and start,end loop
+int round_world_coordinates(int coord, int word_size) {
+    if (coord < 0) {
+        return word_size -1;
+    }
+    if (coord > word_size-1) {
+        return 0;
+    }
+    return coord;
+}
+
 // returns a Vector2 pointer with updated 
 //    coordinates in the given direction 
-void get_updated_vector(enum SnakeDirection direction, Vector2 oldPosition,Vector2* dest) {
+void get_updated_vector(enum SnakeDirection direction, Position oldPosition,Position* dest) {
     dest->x = oldPosition.x;
     dest->y = oldPosition.y;
     switch (direction)
