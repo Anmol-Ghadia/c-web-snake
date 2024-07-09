@@ -1,87 +1,136 @@
-/*******************************************************************************************
-*
-*   raylib [core] example - Basic window (adapted for HTML5 platform)
-*
-*   NOTE: This example is prepared to compile for PLATFORM_WEB, and PLATFORM_DESKTOP
-*   As you will notice, code structure is slightly diferent to the other examples...
-*   To compile it for PLATFORM_WEB just uncomment #define PLATFORM_WEB at beginning
-*
-*   Example originally created with raylib 1.3, last time updated with raylib 1.3
-*
-*   Example licensed under an unmodified zlib/libpng license, which is an OSI-certified,
-*   BSD-like license that allows static linking with closed source software
-*
-*   Copyright (c) 2015-2024 Ramon Santamaria (@raysan5)
-*
-********************************************************************************************/
+#include <stddef.h>
+#include <stdlib.h>
 
 #include "raylib.h"
-
-//#define PLATFORM_WEB
 
 #if defined(PLATFORM_WEB)
     #include <emscripten/emscripten.h>
 #endif
 
-//----------------------------------------------------------------------------------
-// Global Variables Definition
-//----------------------------------------------------------------------------------
-const int screenWidth = 800;
-const int screenHeight = 450;
+typedef struct SnakeBody
+{
+    int posX;
+    int posY;
+    void* next;
+} SnakeBody;
 
-//----------------------------------------------------------------------------------
-// Module functions declaration
-//----------------------------------------------------------------------------------
-void UpdateDrawFrame(void);     // Update and Draw one frame
+typedef struct Snake
+{
+    int size;
+    SnakeBody* head;
+    SnakeBody* tail;
+} Snake;
 
-//------------------------------------------------------------------------------------
-// Program main entry point
-//------------------------------------------------------------------------------------
+
+void UpdateDrawFrame(void);
+void InitVariables();
+
+const int screenWidth = 1280;
+const int screenHeight = 720;
+Snake* SNAKE;
+
+
 int main(void)
 {
-    // Initialization
-    //--------------------------------------------------------------------------------------
     InitWindow(screenWidth, screenHeight, "raylib [core] example - basic window");
+    InitVariables();
 
 #if defined(PLATFORM_WEB)
     emscripten_set_main_loop(UpdateDrawFrame, 0, 1);
 #else
-    SetTargetFPS(60);   // Set our game to run at 60 frames-per-second
-    //--------------------------------------------------------------------------------------
+    SetTargetFPS(240);
 
-    // Main game loop
-    while (!WindowShouldClose())    // Detect window close button or ESC key
+    while (!WindowShouldClose())
     {
         UpdateDrawFrame();
     }
 #endif
 
-    // De-Initialization
-    //--------------------------------------------------------------------------------------
-    CloseWindow();        // Close window and OpenGL context
-    //--------------------------------------------------------------------------------------
+    CloseWindow();
 
     return 0;
 }
 
-//----------------------------------------------------------------------------------
-// Module Functions Definition
-//----------------------------------------------------------------------------------
+
+// Draws the grid for snake game
+void drawgrid(int gridSize,Color gridColor) {
+    int height = GetScreenHeight();
+    int width = GetScreenWidth();
+
+    int columns = width/gridSize;
+    int rows = height/gridSize;
+
+    for (size_t i = 0; i < columns; i++)
+    {
+        Vector2 columnStart = {(width/columns) * i, 0};
+        Vector2 columnEnd = {(width/columns) * i, height};
+        DrawLineV(columnStart,columnEnd,gridColor);
+    }
+
+    for (size_t i = 0; i < rows; i++)
+    {
+        Vector2 rowStart = {0, (height/rows) * i};
+        Vector2 rowEnd = {width, (height/rows) * i};
+        DrawLineV(rowStart,rowEnd,gridColor);
+    }
+    
+}
+
+// makes a bounding box lines on viewport
+void drawWindowBoxMarker() {
+    int height = GetScreenHeight();
+    int width = GetScreenWidth();
+    DrawLine(0,0,width,height,RED);
+    DrawLine(width,0,0,height,RED);
+}
+
+// Makes Lines on viewport
+void drawWindowBorder(Color color) {
+    int height = GetScreenHeight();
+    int width = GetScreenWidth();
+    DrawLine(0,0,width,0,color); // TOP
+    DrawLine(0,height-1,width,height-1,color); // BOTTOM
+    DrawLine(1,0,1,height,color); // LEFT
+    DrawLine(width,0,width,height,color); // RIGHT
+}
+
+// Initializes global vars
+void InitVariables() {
+    SNAKE = malloc(sizeof(struct Snake));
+    SNAKE->size = 1;
+
+    SnakeBody* head = malloc(sizeof(struct SnakeBody));
+    head->posX = 5;
+    head->posY = 5;
+    SNAKE->head = head;
+}
+
+void paintBody(SnakeBody* bodyToPaint) {
+    Vector2 topLeft =  {40 * (bodyToPaint->posX), 40 * (bodyToPaint->posY)};
+    Vector2 size =  {40, 40};
+    DrawRectangleV(topLeft,size,GRAY);
+}
+
+void drawSnake() {
+    struct SnakeBody* currentBody = SNAKE->head;
+    for (size_t i = 0; i < SNAKE->size; i++)
+    {
+        paintBody(currentBody);
+        currentBody = currentBody->next;
+    }
+}
+
+// Game Loop function
 void UpdateDrawFrame(void)
 {
-    // Update
-    //----------------------------------------------------------------------------------
-    // TODO: Update your variables here
-    //----------------------------------------------------------------------------------
-
-    // Draw
-    //----------------------------------------------------------------------------------
     BeginDrawing();
+    ClearBackground(WHITE);
 
-        ClearBackground(RAYWHITE);
+    drawgrid(40,LIME);
+    // drawWindowBoxMarker();
+    drawWindowBorder(ORANGE);
 
-        DrawText("Congrats Anmol! You created your first window!", 190, 200, 20, LIGHTGRAY);
-
+    drawSnake();
+    
     EndDrawing();
-    //----------------------------------------------------------------------------------
 }
