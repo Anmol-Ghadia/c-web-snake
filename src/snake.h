@@ -33,6 +33,7 @@ typedef struct Snake {
     unsigned int size;
     enum SnakeDirection direction;
     enum Boolean increase_length;
+    enum Boolean direction_changed;
     SnakeBody* head;
     SnakeBody* tail;
 } Snake;

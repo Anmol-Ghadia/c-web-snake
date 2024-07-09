@@ -26,6 +26,9 @@ void destroy_global_variables();
 int round_world_coordinates(int, int);
 void move_food_randomly();
 void draw_food();
+void check_food_eaten();
+int food_is_colliding_snake(); 
+void check_body_eaten();
 
 // old helper function defs
 void drawgrid(Color);
@@ -36,11 +39,12 @@ void drawWindowBorder(Color);
 Position g_food = {0,0};
 int g_screen_width = 1280;
 int g_screen_height = 720;
-int g_grid_size = 40;
+int g_grid_size = 80;
 int g_vertical_grid_count;
 int g_horizontal_grid_count;
 double g_last_snake_movement_time = 0;
 double g_snake_movement_time = 0.5;
+enum Boolean g_game_over = FALSE;
 
 int main(void)
 {
@@ -68,20 +72,29 @@ int main(void)
 // Game Loop function
 void update_draw_frame(void)
 {
-    handle_key_press();
-    move_snake();
-
+    
     BeginDrawing();
-        
+
         ClearBackground(WHITE);
-        
+
         drawgrid(LIME);
-        // drawWindowBoxMarker();
         drawWindowBorder(ORANGE);
+
+        if (g_game_over == TRUE) {
+
+            drawWindowBoxMarker();
+        
+        } else {
+            
+            handle_key_press();
+            move_snake();
+            check_food_eaten();
+            check_body_eaten();
+        }
 
         draw_snake();
         draw_food();
-    
+
     EndDrawing();
 }
 
@@ -89,13 +102,51 @@ void update_draw_frame(void)
 
 // Free all malloced memory of snake
 void destroy_global_variables() {
+    // TODO !!!
+}
 
+// sets g_game_over if snake has eaten itself 
+void check_body_eaten() {
+    if (SNAKE->size < 2) return;
+
+    SnakeBody* head = SNAKE->head;
+    SnakeBody* current = head->next;
+    for (size_t i = 1; i < SNAKE->size; i++)
+    {
+        if (head->posX == current->posX && head->posY == current->posY) {
+            g_game_over = TRUE;
+            return;
+        }
+        current = current->next;
+    }
+}
+
+// Returns 1 if food is colliding
+int food_is_colliding_snake() {
+    SnakeBody* current = SNAKE->head;
+    for (size_t i = 0; i < SNAKE->size; i++)
+    {
+        if (current->posX == g_food.x && current->posY == g_food.y) {
+            return 1;
+        }
+        current = current->next;
+    }
+    return 0;
+}
+
+// Checks if the snake has eaten food
+void check_food_eaten() {
+    if (SNAKE->head->posX == g_food.x && SNAKE->head->posY == g_food.y) {
+        // Food eaten
+        move_food_randomly();
+        SNAKE->increase_length = TRUE;
+    }
 }
 
 // Paints a single body piece on grid
 void paint_snake_body_helper(SnakeBody* bodyToPaint) {
-    Vector2 topLeft =  {40 * (bodyToPaint->posX), 40 * (bodyToPaint->posY)};
-    Vector2 size =  {40, 40};
+    Vector2 topLeft =  {g_grid_size * (bodyToPaint->posX), g_grid_size * (bodyToPaint->posY)};
+    Vector2 size =  {g_grid_size, g_grid_size};
     DrawRectangleV(topLeft,size,GRAY);
 }
 
@@ -116,6 +167,7 @@ void initialize_global_variables() {
     SNAKE->size = 1;
     SNAKE->direction = DOWN;
     SNAKE->increase_length = FALSE;
+    SNAKE->direction_changed = FALSE;
 
     SnakeBody* head = malloc(sizeof(struct SnakeBody));
     head->posX = 0;
@@ -157,8 +209,8 @@ void handle_key_press() {
 
 // Draws the food on scren
 void draw_food() {
-    Vector2 topLeft =  {40 * (g_food.x), 40 * (g_food.y)};
-    Vector2 size =  {40, 40};
+    Vector2 topLeft =  {g_grid_size * (g_food.x), g_grid_size * (g_food.y)};
+    Vector2 size =  {g_grid_size, g_grid_size};
     DrawRectangleV(topLeft,size,RED);
 }
 
@@ -166,11 +218,33 @@ void draw_food() {
 void move_food_randomly() {
     g_food.x = rand() % g_horizontal_grid_count;
     g_food.y = rand() % g_vertical_grid_count;
+    if (food_is_colliding_snake() == 1) {
+        move_food_randomly();
+    }
 }
 
 // changes  the direction of snake as given by enum 
 void change_snake_direction(enum SnakeDirection direction) {
-    SNAKE->direction = direction;
+    if (SNAKE->direction_changed == FALSE) {
+        // Avoids setting reverse direction
+        switch (SNAKE->direction)
+        {
+        case UP:
+            if (direction == DOWN) return;
+            break;
+        case RIGHT:
+            if (direction == LEFT) return;
+            break;
+        case DOWN:
+            if (direction == UP) return;
+            break;
+        default:
+            if (direction == RIGHT) return;
+            break;
+        }
+        SNAKE->direction = direction;
+        SNAKE->direction_changed = TRUE;
+    }
 }
 
 // Periodically checks if the snake should be moved
@@ -219,6 +293,7 @@ void update_snake() {
 
     }
 
+    SNAKE->direction_changed = FALSE;
     free(new_position);
 }
 
