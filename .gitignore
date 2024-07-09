@@ -1,3 +1,5 @@
 coverage
-bin/**.*
+bin/desktop/**.*
+bin/web/**.*
 .vscode
+src/**.o
