@@ -24,6 +24,7 @@ typedef struct Position {
 typedef struct SnakeBody {
     unsigned int posX;
     unsigned int posY; 
+    unsigned int index;
     void* next;
 } SnakeBody;
 

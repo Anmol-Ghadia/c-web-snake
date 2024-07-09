@@ -31,3 +31,9 @@ Using git bash is the recommeded CLI on `windows`
     ```
     `Note:` make file is configured to build for Windows, modify the file using command from above to build for Unix systems
 
+## TODO
+1) add two triangles on corners instead of masking using fake square
+1) fix painting when snake is going offscreen and wrapping on opposite edge
+1) Figure out window resizing
+1) Add points system
+1) show death screen
