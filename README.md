@@ -34,6 +34,8 @@ Using git bash is the recommeded CLI on `windows`
 ## TODO
 1) add two triangles on corners instead of masking using fake square
 1) fix painting when snake is going offscreen and wrapping on opposite edge
-1) Figure out window resizing
 1) Add points system
 1) show death screen
+1) add window resizing on wasm
+1) depricate struct boolean as stdbool.h is now included
+1) ~~Figure out window resizing~~

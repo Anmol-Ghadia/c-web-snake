@@ -1,6 +1,7 @@
 // Standard Libs
 #include <stddef.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
 // Libs
 #include "raylib.h"
@@ -11,6 +12,8 @@
 
 // Helper Files
 #include "snake.h"
+
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
 
 // Function defs
 void update_draw_frame(void);
@@ -38,10 +41,12 @@ void drawWindowBoxMarker();
 void drawWindowBorder(Color);
 
 // GLOBALS
+int g_grid_size = 80;
+
+// computed globals
 Position g_food = {0,0};
 int g_screen_width = 1280;
 int g_screen_height = 720;
-int g_grid_size = 80;
 int g_margin_size = 30;
 int g_vertical_grid_count;
 int g_horizontal_grid_count;
@@ -52,6 +57,7 @@ Color g_background_color = WHITE;
 
 int main(void)
 {
+    SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     InitWindow(g_screen_width, g_screen_height, "Simple Snake Game");
     initialize_global_variables();
 
@@ -76,7 +82,14 @@ int main(void)
 // Game Loop function
 void update_draw_frame(void)
 {
-    
+    if (IsWindowResized()) {
+        // New dimensions
+        g_screen_height = GetScreenHeight();
+        g_screen_width = GetScreenWidth();
+
+        // recompute global vargs
+        g_grid_size = MIN(g_screen_width/g_horizontal_grid_count,g_screen_height/g_vertical_grid_count);
+    }
     BeginDrawing();
 
         ClearBackground(g_background_color);
@@ -523,20 +536,20 @@ void get_updated_vector(enum SnakeDirection direction, Position oldPosition,Posi
 // Draws the grid for snake game
 void drawgrid(Color gridColor) {
 
-    int columns = g_screen_width/g_grid_size;
-    int rows = g_screen_height/g_grid_size;
+    // int columns = g_screen_width/g_grid_size;
+    // int rows = g_screen_height/g_grid_size;
 
-    for (size_t i = 0; i < columns; i++)
+    for (size_t i = 0; i < g_horizontal_grid_count; i++)
     {
-        Vector2 columnStart = {(g_screen_width/columns) * i, 0};
-        Vector2 columnEnd = {(g_screen_width/columns) * i, g_screen_height};
+        Vector2 columnStart = {g_grid_size * i, 0};
+        Vector2 columnEnd = {g_grid_size * i, g_grid_size*g_vertical_grid_count};
         DrawLineV(columnStart,columnEnd,gridColor);
     }
 
-    for (size_t i = 0; i < rows; i++)
+    for (size_t i = 0; i < g_vertical_grid_count; i++)
     {
-        Vector2 rowStart = {0, (g_screen_height/rows) * i};
-        Vector2 rowEnd = {g_screen_width, (g_screen_height/rows) * i};
+        Vector2 rowStart = {0, g_grid_size * i};
+        Vector2 rowEnd = {g_horizontal_grid_count*g_grid_size, g_grid_size * i};
         DrawLineV(rowStart,rowEnd,gridColor);
     }
     
@@ -550,8 +563,11 @@ void drawWindowBoxMarker() {
 
 // Makes Lines on viewport
 void drawWindowBorder(Color color) {
-    DrawLine(0,0,g_screen_width,0,color); // TOP
-    DrawLine(0,g_screen_height-1,g_screen_width,g_screen_height-1,color); // BOTTOM
-    DrawLine(1,0,1,g_screen_height,color); // LEFT
-    DrawLine(g_screen_width,0,g_screen_width,g_screen_height,color); // RIGHT
+    int right_padding = g_screen_width - (g_horizontal_grid_count*g_grid_size);
+    int bottom_padding = g_screen_height - (g_vertical_grid_count*g_grid_size);
+
+    DrawLine(0,0,g_screen_width-right_padding,0,color); // TOP
+    DrawLine(0,g_screen_height-bottom_padding-1,g_screen_width-right_padding,g_screen_height-bottom_padding-1,color); // BOTTOM
+    DrawLine(1,0,1,g_screen_height-bottom_padding,color); // LEFT
+    DrawLine(g_screen_width-right_padding,0,g_screen_width-right_padding,g_screen_height-bottom_padding,color); // RIGHT
 }
