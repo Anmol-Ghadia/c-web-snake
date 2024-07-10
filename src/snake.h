@@ -10,11 +10,6 @@ enum SnakeDirection {
     LEFT = 3
 };
 
-enum Boolean {
-    FALSE = 0,
-    TRUE = 1
-};
-
 typedef struct Position {
     int x;
     int y;
@@ -33,8 +28,8 @@ typedef struct SnakeBody {
 typedef struct Snake {
     unsigned int size;
     enum SnakeDirection direction;
-    enum Boolean increase_length;
-    enum Boolean direction_changed;
+    bool increase_length;
+    bool direction_changed;
     SnakeBody* head;
     SnakeBody* tail;
 } Snake;

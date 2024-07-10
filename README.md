@@ -1,3 +1,9 @@
+# Snake Game
+A simple snake that targets Web using [`wasm`](https://webassembly.org/) and standard `desktop` platform. 
+
+## Demo
+Find the Web version hosted here: [Demo](https://www.students.cs.ubc.ca/~aghadia/trialWasm/main.html)
+> Note: since the project is under development, the demo might not be the latest version.
 ## Build Guide
 
 ### Using CLI
@@ -23,7 +29,7 @@ Using git bash is the recommeded CLI on `windows`
 ### Using Make
 1) Web build
     ```BASH
-    make web    
+    make web
     ```
 1) Desktop build
     ```BASH
@@ -32,10 +38,14 @@ Using git bash is the recommeded CLI on `windows`
     `Note:` make file is configured to build for Windows, modify the file using command from above to build for Unix systems
 
 ## TODO
-1) Add points system
+1) Add menu
+1) Add styling for head
+1) Add rounded cap on tail
+1) Add touch screen controls
 1) show death screen
-1) add window resizing on Web
-1) depricate struct boolean as stdbool.h is now included
+1) ~~add styling~~
+1) ~~Add points system~~
+1) ~~depricate struct boolean as stdbool.h is now included~~
 1) ~~fix painting when snake is going offscreen and wrapping on opposite edge~~
 1) ~~add two triangles on corners instead of masking using fake square~~
 1) ~~Figure out window resizing~~

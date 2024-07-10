@@ -2,6 +2,7 @@
 #include <stddef.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <stdio.h>
 #include <time.h>
 
 // Libs
@@ -35,6 +36,7 @@ int food_is_colliding_snake();
 void check_body_eaten();
 enum SnakeDirection get_snake_relative_direction(SnakeBody*, SnakeBody*);
 void print_error_body(SnakeBody*);
+void draw_score();
 
 // old helper function defs
 void drawgrid(Color);
@@ -52,8 +54,9 @@ int g_margin_size = 30;
 int g_vertical_grid_count;
 int g_horizontal_grid_count;
 double g_last_snake_movement_time = 0;
-double g_snake_movement_time = 0.5;
-enum Boolean g_game_over = FALSE;
+double g_snake_movement_time = 0.4;
+unsigned int g_score = 0;
+bool g_game_over = false;
 Color g_background_color = WHITE;
 
 int main(void)
@@ -98,7 +101,7 @@ void update_draw_frame(void)
         drawgrid(LIME);
         drawWindowBorder(ORANGE);
 
-        if (g_game_over == TRUE) {
+        if (g_game_over) {
 
             drawWindowBoxMarker();
         
@@ -112,6 +115,7 @@ void update_draw_frame(void)
 
         draw_snake();
         draw_food();
+        draw_score();
 
     EndDrawing();
 }
@@ -123,6 +127,47 @@ void destroy_global_variables() {
     // TODO !!!
 }
 
+// Helper function to convert hue to RGB
+float hueToRgb(float p, float q, float t) {
+    if (t < 0) t += 1;
+    if (t > 1) t -= 1;
+    if (t < 1.0 / 6) return p + (q - p) * 6 * t;
+    if (t < 1.0 / 2) return q;
+    if (t < 2.0 / 3) return p + (q - p) * (2.0 / 3 - t) * 6;
+    return p;
+}
+
+// Function to convert HSL to RGB8
+Color hslToRgb8(float h, float s, float l) {
+    float r, g, b;
+
+    if (s == 0) {
+        r = g = b = l; // Achromatic
+    } else {
+        float q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+        float p = 2 * l - q;
+        r = hueToRgb(p, q, h / 360 + 1.0 / 3);
+        g = hueToRgb(p, q, h / 360);
+        b = hueToRgb(p, q, h / 360 - 1.0 / 3);
+    }
+
+    Color rgb8;
+    rgb8.r = (unsigned char)(r * 255);
+    rgb8.g = (unsigned char)(g * 255);
+    rgb8.b = (unsigned char)(b * 255);
+    rgb8.a = 255;
+
+    return rgb8;
+}
+
+void draw_score() {
+    char buffer[10];
+    const char* str_pointer = &buffer[0];
+
+    sprintf(buffer, "%d", g_score);
+    DrawText(str_pointer,g_margin_size,g_margin_size,g_grid_size-g_margin_size,BLACK);
+}
+
 // sets g_game_over if snake has eaten itself 
 void check_body_eaten() {
     if (SNAKE->size < 2) return;
@@ -132,7 +177,7 @@ void check_body_eaten() {
     for (size_t i = 1; i < SNAKE->size; i++)
     {
         if (head->posX == current->posX && head->posY == current->posY) {
-            g_game_over = TRUE;
+            g_game_over = true;
             return;
         }
         current = current->next;
@@ -157,31 +202,35 @@ void check_food_eaten() {
     if (SNAKE->head->posX == g_food.x && SNAKE->head->posY == g_food.y) {
         // Food eaten
         move_food_randomly();
-        SNAKE->increase_length = TRUE;
+        SNAKE->increase_length = true;
+        g_score += MIN(15,3*SNAKE->size);
     }
+}
+
+Color getColor(SnakeBody* bodyToPaint) {
+    return hslToRgb8(((double)bodyToPaint->index/15)*360,0.75,0.5);
 }
 
 // paints a standing body
 void print_body_standing(SnakeBody* bodyToPaint) {
     Vector2 topLeft =  {g_grid_size * (bodyToPaint->posX)+g_margin_size, g_grid_size * (bodyToPaint->posY)};
     Vector2 size =  {g_grid_size-2*g_margin_size, g_grid_size};
-    unsigned int blue = (bodyToPaint->index%10)*25.5;
-    Color color = {0,0,blue,255};
+    
+    Color color = getColor(bodyToPaint);
     DrawRectangleV(topLeft,size,color);
 }
 
 void print_body_sleeping(SnakeBody* bodyToPaint) {
     Vector2 topLeft =  {g_grid_size * (bodyToPaint->posX), g_grid_size * (bodyToPaint->posY)+g_margin_size};
     Vector2 size =  {g_grid_size, g_grid_size-2*g_margin_size};
-    unsigned int blue = (bodyToPaint->index%10)*25.5;
-    Color color = {0,0,blue,255};
+    
+    Color color = getColor(bodyToPaint);
     DrawRectangleV(topLeft,size,color);
 }
 
 void print_body_up_right(SnakeBody* bodyToPaint) {
     
-    unsigned int blue = (bodyToPaint->index%10)*25.5;
-    Color color = {0,0,blue,255};
+    Color color = getColor(bodyToPaint);
     
     // Main body
     Vector2 topLeft =  {g_grid_size * (bodyToPaint->posX)+g_margin_size, g_grid_size * (bodyToPaint->posY)};
@@ -196,8 +245,7 @@ void print_body_up_right(SnakeBody* bodyToPaint) {
 }
 
 void print_body_up_left(SnakeBody* bodyToPaint) {
-    unsigned int blue = (bodyToPaint->index%10)*25.5;
-    Color color = {0,0,blue,255};
+    Color color = getColor(bodyToPaint);
     
     // Main body
     Vector2 topLeft =  {g_grid_size * (bodyToPaint->posX)+g_margin_size, g_grid_size * (bodyToPaint->posY)};
@@ -212,8 +260,7 @@ void print_body_up_left(SnakeBody* bodyToPaint) {
 }
 
 void print_body_down_left(SnakeBody* bodyToPaint) {
-    unsigned int blue = (bodyToPaint->index%10)*25.5;
-    Color color = {0,0,blue,255};
+    Color color = getColor(bodyToPaint);
     
     // Main body
     Vector2 topLeft =  {g_grid_size * (bodyToPaint->posX)+g_margin_size, g_grid_size * (bodyToPaint->posY)+g_margin_size};
@@ -226,8 +273,7 @@ void print_body_down_left(SnakeBody* bodyToPaint) {
 }
 
 void print_body_down_right(SnakeBody* bodyToPaint) {
-    unsigned int blue = (bodyToPaint->index%10)*25.5;
-    Color color = {0,0,blue,255};
+    Color color = getColor(bodyToPaint);
     
     // Main body
     Vector2 topLeft =  {g_grid_size * (bodyToPaint->posX)+g_margin_size, g_grid_size * (bodyToPaint->posY)+g_margin_size};
@@ -271,12 +317,7 @@ void paint_snake_body_helper(SnakeBody* last, SnakeBody* bodyToPaint,SnakeBody* 
     if (dir_1 == UP && dir_2 == LEFT) print_body_down_right(bodyToPaint);
     if (dir_1 == LEFT && dir_2 == UP) print_body_down_right(bodyToPaint);
 
-    // print_error_body(bodyToPaint);
-    // Vector2 topLeft =  {g_grid_size * (bodyToPaint->posX)+g_margin_size, g_grid_size * (bodyToPaint->posY)+g_margin_size};
-    // Vector2 size =  {g_grid_size-2*g_margin_size, g_grid_size-2*g_margin_size};
-    // unsigned int blue = (bodyToPaint->index%10)*25.5;
-    // Color color = {0,0,blue,255};
-    // DrawRectangleV(topLeft,size,color);
+    print_error_body(bodyToPaint);
 }
 
 // Whenever a direction error is encountered, the body is painted with this
@@ -307,7 +348,8 @@ void paint_snake_head_helper(SnakeBody* head, SnakeBody* next) {
         size.x += g_margin_size;
         break;
     }
-    DrawRectangleV(topLeft,size,ORANGE);
+
+    DrawRectangleV(topLeft,size,BLACK);
 }
 
 void paint_snake_tail_helper(SnakeBody* tail, SnakeBody* secondLast) {
@@ -330,7 +372,8 @@ void paint_snake_tail_helper(SnakeBody* tail, SnakeBody* secondLast) {
         size.x += g_margin_size;
         break;
     }
-    DrawRectangleV(topLeft,size,ORANGE);
+    Color color = getColor(tail);
+    DrawRectangleV(topLeft,size,color);
 }
 
 // REQUIRES, first and second are at right angles
@@ -405,8 +448,8 @@ void initialize_global_variables() {
     SNAKE = malloc(sizeof(struct Snake));
     SNAKE->size = 2;
     SNAKE->direction = DOWN;
-    SNAKE->increase_length = FALSE;
-    SNAKE->direction_changed = FALSE;
+    SNAKE->increase_length = false;
+    SNAKE->direction_changed = false;
     SNAKE->head = head;
     SNAKE->tail = tail;
 
@@ -417,21 +460,21 @@ void initialize_global_variables() {
 
 // Checks if user input is received
 void handle_key_press() {
-    if (IsKeyPressed(KEY_W)) {
+    if (IsKeyPressed(KEY_W) || IsKeyPressed(KEY_UP)) {
         change_snake_direction(UP);
     }
-    if (IsKeyPressed(KEY_A)) {
+    if (IsKeyPressed(KEY_A) || IsKeyPressed(KEY_LEFT)) {
         change_snake_direction(LEFT);
     }
-    if (IsKeyPressed(KEY_S)) {
+    if (IsKeyPressed(KEY_S) || IsKeyPressed(KEY_DOWN)) {
         change_snake_direction(DOWN);
     }
-    if (IsKeyPressed(KEY_D)) {
+    if (IsKeyPressed(KEY_D) || IsKeyPressed(KEY_RIGHT)) {
         change_snake_direction(RIGHT);
     }
     // TEMPORARY !!!
     if (IsKeyPressed(KEY_E)) {
-        SNAKE->increase_length = TRUE;
+        SNAKE->increase_length = true;
     }
     if (IsKeyPressed(KEY_R)) {
         move_food_randomly();
@@ -456,7 +499,7 @@ void move_food_randomly() {
 
 // changes  the direction of snake as given by enum 
 void change_snake_direction(enum SnakeDirection direction) {
-    if (SNAKE->direction_changed == FALSE) {
+    if (!SNAKE->direction_changed) {
         // Avoids setting reverse direction
         switch (SNAKE->direction)
         {
@@ -474,7 +517,7 @@ void change_snake_direction(enum SnakeDirection direction) {
             break;
         }
         SNAKE->direction = direction;
-        SNAKE->direction_changed = TRUE;
+        SNAKE->direction_changed = true;
     }
 }
 
@@ -482,6 +525,9 @@ void change_snake_direction(enum SnakeDirection direction) {
 void move_snake() {
     if (GetTime() - g_last_snake_movement_time > g_snake_movement_time) {
         update_snake();
+        if (g_score > 0) {
+            g_score--;
+        }
         g_last_snake_movement_time = GetTime();
     }
 }
@@ -506,7 +552,7 @@ void update_snake() {
         current = current->next;
     }
 
-    if (SNAKE->increase_length == TRUE) {
+    if (SNAKE->increase_length) {
         // Make new tail
         SnakeBody* new_tail = malloc(sizeof(struct SnakeBody));
         new_tail->next = NULL;
@@ -521,11 +567,11 @@ void update_snake() {
         // Update snake
         SNAKE->tail = new_tail;
         SNAKE->size++;
-        SNAKE->increase_length = FALSE;
+        SNAKE->increase_length = false;
 
     }
 
-    SNAKE->direction_changed = FALSE;
+    SNAKE->direction_changed = false;
     free(new_position);
 }
 
