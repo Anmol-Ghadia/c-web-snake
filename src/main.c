@@ -2,6 +2,7 @@
 #include <stddef.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <time.h>
 
 // Libs
 #include "raylib.h"
@@ -178,55 +179,64 @@ void print_body_sleeping(SnakeBody* bodyToPaint) {
 }
 
 void print_body_up_right(SnakeBody* bodyToPaint) {
-    // Main body
-    Vector2 topLeft =  {g_grid_size * (bodyToPaint->posX)+g_margin_size, g_grid_size * (bodyToPaint->posY)};
-    Vector2 size =  {g_grid_size-g_margin_size-1, g_grid_size-g_margin_size};
+    
     unsigned int blue = (bodyToPaint->index%10)*25.5;
     Color color = {0,0,blue,255};
+    
+    // Main body
+    Vector2 topLeft =  {g_grid_size * (bodyToPaint->posX)+g_margin_size, g_grid_size * (bodyToPaint->posY)};
+    Vector2 size =  {g_grid_size-2*g_margin_size, g_grid_size-g_margin_size};
+    
     DrawRectangleV(topLeft,size,color);
 
     // FILL
-    Vector2 topLeftFill =  {g_grid_size * (bodyToPaint->posX)+g_grid_size-g_margin_size, g_grid_size * (bodyToPaint->posY)};
-    Vector2 sizeFill =  {g_margin_size-1,g_margin_size};
-    DrawRectangleV(topLeftFill,sizeFill,g_background_color);
+    Vector2 topLeftFill =  {topLeft.x + size.x, topLeft.y + g_margin_size};
+    Vector2 sizeFill =  {g_margin_size,g_grid_size-2*g_margin_size};
+    DrawRectangleV(topLeftFill,sizeFill,color);
 }
 
 void print_body_up_left(SnakeBody* bodyToPaint) {
-    // Main body
-    Vector2 topLeft =  {g_grid_size * (bodyToPaint->posX)+1, g_grid_size * (bodyToPaint->posY)};
-    Vector2 size =  {g_grid_size-g_margin_size, g_grid_size-g_margin_size};
     unsigned int blue = (bodyToPaint->index%10)*25.5;
     Color color = {0,0,blue,255};
+    
+    // Main body
+    Vector2 topLeft =  {g_grid_size * (bodyToPaint->posX)+g_margin_size, g_grid_size * (bodyToPaint->posY)};
+    Vector2 size =  {g_grid_size-2*g_margin_size, g_grid_size-g_margin_size};
+    
     DrawRectangleV(topLeft,size,color);
 
     // FILL
-    Vector2 topLeftFill =  {g_grid_size * (bodyToPaint->posX), g_grid_size * (bodyToPaint->posY)};
-    Vector2 sizeFill =  {g_margin_size-1,g_margin_size};
-    DrawRectangleV(topLeftFill,sizeFill,g_background_color);
+    Vector2 topLeftFill =  {g_grid_size * (bodyToPaint->posX), g_grid_size * (bodyToPaint->posY)+g_margin_size};
+    Vector2 sizeFill =  {g_margin_size,g_grid_size-2*g_margin_size};
+    DrawRectangleV(topLeftFill,sizeFill,color);
 }
 
 void print_body_down_left(SnakeBody* bodyToPaint) {
-    Vector2 topLeft =  {g_grid_size * (bodyToPaint->posX), g_grid_size * (bodyToPaint->posY)+g_margin_size};
-    Vector2 size =  {g_grid_size-g_margin_size, g_grid_size-g_margin_size};
     unsigned int blue = (bodyToPaint->index%10)*25.5;
     Color color = {0,0,blue,255};
+    
+    // Main body
+    Vector2 topLeft =  {g_grid_size * (bodyToPaint->posX)+g_margin_size, g_grid_size * (bodyToPaint->posY)+g_margin_size};
+    Vector2 size =  {g_grid_size-2*g_margin_size,g_grid_size-g_margin_size};
     DrawRectangleV(topLeft,size,color);
 
-    Vector2 topLeftFill =  {g_grid_size * (bodyToPaint->posX), g_grid_size * (bodyToPaint->posY)+g_grid_size-g_margin_size};
-    Vector2 sizeFill =  {g_margin_size, g_margin_size-1};
-    DrawRectangleV(topLeftFill,sizeFill,g_background_color);
+    Vector2 topLeftFill =  {g_grid_size * (bodyToPaint->posX), g_grid_size * (bodyToPaint->posY)+g_margin_size};
+    Vector2 sizeFill =  {g_margin_size, g_grid_size-2*g_margin_size};
+    DrawRectangleV(topLeftFill,sizeFill,color);
 }
 
 void print_body_down_right(SnakeBody* bodyToPaint) {
-    Vector2 topLeft =  {g_grid_size * (bodyToPaint->posX)+g_margin_size, g_grid_size * (bodyToPaint->posY)+g_margin_size};
-    Vector2 size =  {g_grid_size-g_margin_size-1, g_grid_size-g_margin_size-1};
     unsigned int blue = (bodyToPaint->index%10)*25.5;
     Color color = {0,0,blue,255};
+    
+    // Main body
+    Vector2 topLeft =  {g_grid_size * (bodyToPaint->posX)+g_margin_size, g_grid_size * (bodyToPaint->posY)+g_margin_size};
+    Vector2 size =  {g_grid_size-2*g_margin_size,g_grid_size-g_margin_size};
     DrawRectangleV(topLeft,size,color);
 
-    Vector2 topLeftFill =  {g_grid_size * (bodyToPaint->posX)+g_grid_size-g_margin_size, g_grid_size * (bodyToPaint->posY)+g_grid_size-g_margin_size};
-    Vector2 sizeFill =  {g_margin_size-1, g_margin_size-1};
-    DrawRectangleV(topLeftFill,sizeFill,g_background_color);
+    Vector2 topLeftFill =  {topLeft.x+size.x, topLeft.y};
+    Vector2 sizeFill =  {g_margin_size, g_grid_size-2*g_margin_size};
+    DrawRectangleV(topLeftFill,sizeFill,color);
 }
 
 // Paints a single body piece on grid
@@ -326,9 +336,29 @@ void paint_snake_tail_helper(SnakeBody* tail, SnakeBody* secondLast) {
 // REQUIRES, first and second are at right angles
 // gives the direction of first relative to second
 enum SnakeDirection get_snake_relative_direction(SnakeBody* first, SnakeBody* second) {
-    if (first->posX < second->posX) return LEFT;
-    if (second->posX < first->posX) return RIGHT;
-    if (second->posY < first->posY) return DOWN;
+
+    if (first->posX < second->posX) {
+        if ((second->posX - first->posX) > 1) {
+            return RIGHT; // due to world wrap
+        }
+        return LEFT;
+    }
+    if (second->posX < first->posX) {
+        if ((first->posX - second->posX) > 1) {
+            return LEFT; // due to world wrap
+        }
+        return RIGHT;
+    }
+    if (second->posY < first->posY) {
+        if ((first->posY - second->posY) > 1) {
+            return UP; // due to world wrap
+        }
+        return DOWN;
+    }
+
+    if ((second->posY-first->posY)>1) {
+        return DOWN;  // due to world wrap
+    }
     return UP;
 }
 
@@ -381,7 +411,7 @@ void initialize_global_variables() {
     SNAKE->tail = tail;
 
     // Food
-    srand(GetTime());
+    srand(time(NULL));
     move_food_randomly();
 }
 
