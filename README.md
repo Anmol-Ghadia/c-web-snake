@@ -38,9 +38,9 @@ Using git bash is the recommeded CLI on `windows`
     `Note:` make file is configured to build for Windows, modify the file using command from above to build for Unix systems
 
 ## TODO
-1) Add styling for head
 1) Add rounded cap on tail
 1) Fix snake coloring which turns black after certain length
+1) ~~Add styling for head~~
 1) ~~show death screen~~
 1) ~~Add menu~~
 1) ~~Add touch screen controls~~

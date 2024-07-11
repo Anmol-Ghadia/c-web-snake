@@ -62,6 +62,8 @@ int g_margin_size = 30;
 int g_vertical_grid_count;
 int g_horizontal_grid_count;
 double g_last_snake_movement_time = 0;
+int g_pause_button_width=0;
+int g_pause_button_height=0;
 
 unsigned int g_score;
 bool g_game_over = true;
@@ -323,8 +325,18 @@ void draw_playing() {
     
 }
 
+// draws the pause button when game is being played
 void draw_pause_button() {
-    DrawRectangle(g_screen_width-30,0,30,30,BLACK);
+
+    char titleText[6] = "Pause";
+    
+    int titleY = 0;
+    g_pause_button_height = g_screen_height/16;
+    g_pause_button_width = MeasureText((char *)&titleText,g_pause_button_height);
+    int titleX = (g_screen_width-MeasureText((char *)&titleText,g_pause_button_height));
+
+    DrawText((char *)&titleText,titleX,titleY,g_pause_button_height,BLACK);
+    
 }
 
 // ====== HELPER FUNCTIONS ======
@@ -696,19 +708,19 @@ void handle_key_press() {
         g_game_state = PAUSE;
     }
     if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-        bool cond_1 = g_screen_width-30 < GetMouseX();
+        bool cond_1 = g_screen_width-g_pause_button_width < GetMouseX();
         bool cond_2 = GetMouseX() < g_screen_width;
         bool cond_3 = 0 < GetMouseY();
-        bool cond_4 = GetMouseY() < 30;
+        bool cond_4 = GetMouseY() < g_pause_button_height;
         if (cond_1 && cond_2 && cond_3 && cond_4) {
             g_game_state = PAUSE;
         }
     }
     if (IsGestureDetected(GESTURE_TAP)) {
-        bool cond_1 = g_screen_width-30 < GetTouchX();
+        bool cond_1 = g_screen_width-g_pause_button_width < GetTouchX();
         bool cond_2 = GetTouchX() < g_screen_width;
         bool cond_3 = 0 < GetTouchY();
-        bool cond_4 = GetTouchY() < 30;
+        bool cond_4 = GetTouchY() < g_pause_button_height;
         if (cond_1 && cond_2 && cond_3 && cond_4) {
             g_game_state = PAUSE;
         }
