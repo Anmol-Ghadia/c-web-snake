@@ -39,6 +39,9 @@ void print_error_body(SnakeBody*);
 void draw_score();
 void draw_playing();
 void draw_menu(int width,int height);
+void draw_death();
+void draw_pause();
+void draw_pause_button();
 
 // old helper function defs
 void drawgrid(Color);
@@ -60,8 +63,8 @@ int g_vertical_grid_count;
 int g_horizontal_grid_count;
 double g_last_snake_movement_time = 0;
 
-unsigned int g_score = 0;
-bool g_game_over = false;
+unsigned int g_score;
+bool g_game_over = true;
 Color g_background_color = WHITE;
 
 int main(void)
@@ -110,13 +113,71 @@ void update_draw_frame(void)
     case PLAYING:
         draw_playing();
         break;
-    
-    default:
+    case DEATH:
+        draw_death();
+        break;
+    default: // PAUSE by default
+        draw_pause();
         break;
     }
 
     EndDrawing();
 }
+
+// draws the pause menu GameState = PAUSE
+void draw_pause() {
+    ClearBackground(RED);
+
+    // GAME TITLE
+        char titleText[12] = "Game Paused";
+        
+        int titleY = g_screen_height/6;
+        int titleFontSize = g_screen_height/6;
+        int titleX = (g_screen_width-MeasureText((char *)&titleText,titleFontSize))/2;
+
+        DrawText((char *)&titleText,titleX,titleY,titleFontSize,BLACK);
+
+    // START BUTTON
+        char startText[5] = "play";
+        
+        int startY = g_screen_height/2;
+        int startFontHeight = g_screen_height/12;
+        int startFontWidth = MeasureText((char *)&startText,startFontHeight);
+        int startX = (g_screen_width-startFontWidth)/2;
+
+        int startButtonSidePadding = 40;
+        int startButtonUpDownPadding = 10;
+
+        int startButtonX = startX - startButtonSidePadding;
+        int startButtonY = startY-startButtonUpDownPadding;
+        int startButtonWidth = startFontWidth+2*startButtonSidePadding;
+        int startButtonHeight = startFontHeight+2*startButtonUpDownPadding;
+
+        DrawRectangle(startButtonX,startButtonY,startButtonWidth,startButtonHeight,BLACK);
+        DrawText((char *)&startText,startX,startY,startFontHeight,RED);
+    
+    // CHECK START CLICKED
+        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+            bool cond_1 = startButtonX <= GetMouseX();
+            bool cond_2 = GetMouseX() <= startButtonX+startButtonWidth;
+            bool cond_3 = startButtonY <= GetMouseY();
+            bool cond_4 = GetMouseY() <= startButtonY+startButtonHeight;
+            if (cond_1 && cond_2 && cond_3 && cond_4) {
+                g_game_state = PLAYING;
+            }
+        }
+
+        if (IsGestureDetected(GESTURE_TAP)) {
+            bool cond_1 = startButtonX <= GetTouchX();
+            bool cond_2 = GetTouchX() <= startButtonX+startButtonWidth;
+            bool cond_3 = startButtonY <= GetTouchY();
+            bool cond_4 = GetTouchY() <= startButtonY+startButtonHeight;
+            if (cond_1 && cond_2 && cond_3 && cond_4) {
+                g_game_state = PLAYING;
+            }
+        }
+}
+
 // Does the painting for GameState = MENU
 void draw_menu(int width,int height) {
     ClearBackground(RED);
@@ -171,8 +232,72 @@ void draw_menu(int width,int height) {
         }
 }
 
+// Does the painting for GameState = DEATH
+void draw_death() {
+
+    // End game banner
+        int bannerPadding = 150;
+
+        DrawRectangle(bannerPadding,bannerPadding,g_screen_width-2*bannerPadding,g_screen_height-2*bannerPadding,RED);
+
+    // SCORE display
+        char buffer[10];
+        const char* score = &buffer[0];
+        sprintf(buffer, "Score: %d", g_score);
+        
+        int scoreY = bannerPadding+20;
+        int scoreFontSize = g_screen_height/8;
+        int scoreX = (g_screen_width-MeasureText(score,scoreFontSize))/2;
+
+        DrawText(score,scoreX,scoreY,scoreFontSize,BLACK);
+
+    // back button
+        char startText[13] = "back to Menu";
+        
+        int startFontHeight = g_screen_height/12;
+        int startY = g_screen_height-bannerPadding-20-startFontHeight;
+        int startFontWidth = MeasureText((char *)&startText,startFontHeight);
+        int startX = (g_screen_width-startFontWidth)/2;
+
+        int startButtonSidePadding = 40;
+        int startButtonUpDownPadding = 10;
+
+        int startButtonX = startX - startButtonSidePadding;
+        int startButtonY = startY-startButtonUpDownPadding;
+        int startButtonWidth = startFontWidth+2*startButtonSidePadding;
+        int startButtonHeight = startFontHeight+2*startButtonUpDownPadding;
+
+        DrawRectangle(startButtonX,startButtonY,startButtonWidth,startButtonHeight,BLACK);
+        DrawText((char *)&startText,startX,startY,startFontHeight,RED);
+    
+    // CHECK START CLICKED
+        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+            bool cond_1 = startButtonX <= GetMouseX();
+            bool cond_2 = GetMouseX() <= startButtonX+startButtonWidth;
+            bool cond_3 = startButtonY <= GetMouseY();
+            bool cond_4 = GetMouseY() <= startButtonY+startButtonHeight;
+            if (cond_1 && cond_2 && cond_3 && cond_4) {
+                g_game_state = MENU;
+            }
+        }
+
+        if (IsGestureDetected(GESTURE_TAP)) {
+            bool cond_1 = startButtonX <= GetTouchX();
+            bool cond_2 = GetTouchX() <= startButtonX+startButtonWidth;
+            bool cond_3 = startButtonY <= GetTouchY();
+            bool cond_4 = GetTouchY() <= startButtonY+startButtonHeight;
+            if (cond_1 && cond_2 && cond_3 && cond_4) {
+                g_game_state = MENU;
+            }
+        }
+}
+
 // Does the painting for GameState = PLAYING
 void draw_playing() {
+    if (g_game_over) {
+        g_game_over = false;
+        initialize_global_variables();
+    }
 
     ClearBackground(g_background_color);
 
@@ -194,7 +319,12 @@ void draw_playing() {
     draw_snake();
     draw_food();
     draw_score();
+    draw_pause_button();
     
+}
+
+void draw_pause_button() {
+    DrawRectangle(g_screen_width-30,0,30,30,BLACK);
 }
 
 // ====== HELPER FUNCTIONS ======
@@ -255,6 +385,7 @@ void check_body_eaten() {
     {
         if (head->posX == current->posX && head->posY == current->posY) {
             g_game_over = true;
+            g_game_state = DEATH;
             return;
         }
         current = current->next;
@@ -394,7 +525,6 @@ void paint_snake_body_helper(SnakeBody* last, SnakeBody* bodyToPaint,SnakeBody* 
     if (dir_1 == UP && dir_2 == LEFT) print_body_down_right(bodyToPaint);
     if (dir_1 == LEFT && dir_2 == UP) print_body_down_right(bodyToPaint);
 
-    print_error_body(bodyToPaint);
 }
 
 // Whenever a direction error is encountered, the body is painted with this
@@ -406,7 +536,8 @@ void print_error_body(SnakeBody* bodyToPaint) {
 
 // Paints the snake head
 void paint_snake_head_helper(SnakeBody* head, SnakeBody* next) {
-    Vector2 topLeft =  {g_grid_size * (head->posX)+g_margin_size, g_grid_size * (head->posY)+g_margin_size};
+    g_margin_size -= 5;
+    Vector2 topLeft =  {g_grid_size * (head->posX)+g_margin_size,g_grid_size * (head->posY)+g_margin_size};
     Vector2 size =  {g_grid_size-2*g_margin_size, g_grid_size-2*g_margin_size};
     switch (get_snake_relative_direction(head,next))
     {
@@ -427,6 +558,7 @@ void paint_snake_head_helper(SnakeBody* head, SnakeBody* next) {
     }
 
     DrawRectangleV(topLeft,size,BLACK);
+    g_margin_size += 5;
 }
 
 void paint_snake_tail_helper(SnakeBody* tail, SnakeBody* secondLast) {
@@ -530,6 +662,9 @@ void initialize_global_variables() {
     SNAKE->head = head;
     SNAKE->tail = tail;
 
+    // Variables
+    g_score = 0;
+
     // Food
     srand(time(NULL));
     move_food_randomly();
@@ -556,6 +691,27 @@ void handle_key_press() {
         IsKeyPressed(KEY_RIGHT) ||
         IsGestureDetected(GESTURE_SWIPE_RIGHT)) {
         change_snake_direction(RIGHT);
+    }
+    if (IsKeyPressed(KEY_SPACE)) {
+        g_game_state = PAUSE;
+    }
+    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+        bool cond_1 = g_screen_width-30 < GetMouseX();
+        bool cond_2 = GetMouseX() < g_screen_width;
+        bool cond_3 = 0 < GetMouseY();
+        bool cond_4 = GetMouseY() < 30;
+        if (cond_1 && cond_2 && cond_3 && cond_4) {
+            g_game_state = PAUSE;
+        }
+    }
+    if (IsGestureDetected(GESTURE_TAP)) {
+        bool cond_1 = g_screen_width-30 < GetTouchX();
+        bool cond_2 = GetTouchX() < g_screen_width;
+        bool cond_3 = 0 < GetTouchY();
+        bool cond_4 = GetTouchY() < 30;
+        if (cond_1 && cond_2 && cond_3 && cond_4) {
+            g_game_state = PAUSE;
+        }
     }
 
     // TEMPORARY !!!
@@ -714,7 +870,6 @@ void drawgrid(Color gridColor) {
         Vector2 rowEnd = {g_horizontal_grid_count*g_grid_size, g_grid_size * i};
         DrawLineV(rowStart,rowEnd,gridColor);
     }
-    
 }
 
 // makes a bounding box lines on viewport
