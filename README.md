@@ -41,9 +41,9 @@ Using git bash is the recommeded CLI on `windows`
 1) Add menu
 1) Add styling for head
 1) Add rounded cap on tail
-1) ~~Add touch screen controls~~
 1) show death screen
 1) Fix snake coloring which turns black after certain length
+1) ~~Add touch screen controls~~
 1) ~~add styling~~
 1) ~~Add points system~~
 1) ~~depricate struct boolean as stdbool.h is now included~~

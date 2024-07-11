@@ -37,6 +37,8 @@ void check_body_eaten();
 enum SnakeDirection get_snake_relative_direction(SnakeBody*, SnakeBody*);
 void print_error_body(SnakeBody*);
 void draw_score();
+void draw_playing();
+void draw_menu(int width,int height);
 
 // old helper function defs
 void drawgrid(Color);
@@ -49,6 +51,7 @@ double g_snake_movement_time = 0.4;
 int g_grid_size = 80;
 
 // computed globals
+enum GameState g_game_state = MENU;
 Position g_food = {0,0};
 int g_screen_width = 1280;
 int g_screen_height = 720;
@@ -63,7 +66,7 @@ Color g_background_color = WHITE;
 
 int main(void)
 {
-    SetGesturesEnabled(GESTURE_SWIPE_UP | GESTURE_SWIPE_DOWN | GESTURE_SWIPE_RIGHT | GESTURE_SWIPE_LEFT);
+    SetGesturesEnabled(GESTURE_SWIPE_UP | GESTURE_SWIPE_DOWN | GESTURE_SWIPE_RIGHT | GESTURE_SWIPE_LEFT | GESTURE_TAP);
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     InitWindow(g_screen_width, g_screen_height, "Simple Snake Game");
     initialize_global_variables();
@@ -98,29 +101,100 @@ void update_draw_frame(void)
         g_grid_size = MIN(g_screen_width/g_horizontal_grid_count,g_screen_height/g_vertical_grid_count);
     }
     BeginDrawing();
-
-        ClearBackground(g_background_color);
-
-        drawgrid(LIME);
-        drawWindowBorder(ORANGE);
-
-        if (g_game_over) {
-
-            drawWindowBoxMarker();
-        
-        } else {
-            
-            handle_key_press();
-            move_snake();
-            check_food_eaten();
-            check_body_eaten();
-        }
-
-        draw_snake();
-        draw_food();
-        draw_score();
+    
+    switch (g_game_state)
+    {
+    case MENU:
+        draw_menu(g_screen_width,g_screen_height);
+        break;
+    case PLAYING:
+        draw_playing();
+        break;
+    
+    default:
+        break;
+    }
 
     EndDrawing();
+}
+// Does the painting for GameState = MENU
+void draw_menu(int width,int height) {
+    ClearBackground(RED);
+
+    // GAME TITLE
+        char titleText[11] = "Snake Game";
+        
+        int titleY = height/6;
+        int titleFontSize = height/6;
+        int titleX = (width-MeasureText((char *)&titleText,titleFontSize))/2;
+
+        DrawText((char *)&titleText,titleX,titleY,titleFontSize,BLACK);
+
+    // START BUTTON
+        char startText[6] = "START";
+        
+        int startY = height/2;
+        int startFontHeight = height/12;
+        int startFontWidth = MeasureText((char *)&startText,startFontHeight);
+        int startX = (width-startFontWidth)/2;
+
+        int startButtonSidePadding = 40;
+        int startButtonUpDownPadding = 10;
+
+        int startButtonX = startX - startButtonSidePadding;
+        int startButtonY = startY-startButtonUpDownPadding;
+        int startButtonWidth = startFontWidth+2*startButtonSidePadding;
+        int startButtonHeight = startFontHeight+2*startButtonUpDownPadding;
+
+        DrawRectangle(startButtonX,startButtonY,startButtonWidth,startButtonHeight,BLACK);
+        DrawText((char *)&startText,startX,startY,startFontHeight,RED);
+    
+    // CHECK START CLICKED
+        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+            bool cond_1 = startButtonX <= GetMouseX();
+            bool cond_2 = GetMouseX() <= startButtonX+startButtonWidth;
+            bool cond_3 = startButtonY <= GetMouseY();
+            bool cond_4 = GetMouseY() <= startButtonY+startButtonHeight;
+            if (cond_1 && cond_2 && cond_3 && cond_4) {
+                g_game_state = PLAYING;
+            }
+        }
+
+        if (IsGestureDetected(GESTURE_TAP)) {
+            bool cond_1 = startButtonX <= GetTouchX();
+            bool cond_2 = GetTouchX() <= startButtonX+startButtonWidth;
+            bool cond_3 = startButtonY <= GetTouchY();
+            bool cond_4 = GetTouchY() <= startButtonY+startButtonHeight;
+            if (cond_1 && cond_2 && cond_3 && cond_4) {
+                g_game_state = PLAYING;
+            }
+        }
+}
+
+// Does the painting for GameState = PLAYING
+void draw_playing() {
+
+    ClearBackground(g_background_color);
+
+    drawgrid(LIME);
+    drawWindowBorder(ORANGE);
+
+    if (g_game_over) {
+
+        drawWindowBoxMarker();
+    
+    } else {
+        
+        handle_key_press();
+        move_snake();
+        check_food_eaten();
+        check_body_eaten();
+    }
+
+    draw_snake();
+    draw_food();
+    draw_score();
+    
 }
 
 // ====== HELPER FUNCTIONS ======

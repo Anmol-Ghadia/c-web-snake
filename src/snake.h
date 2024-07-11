@@ -2,7 +2,12 @@
 #define SNAKE_H
 
 // Type defs
-
+enum GameState {
+    MENU = 0,
+    PLAYING = 1,
+    PAUSE = 2,
+    DEATH = 3
+};
 enum SnakeDirection {
     UP = 0,
     RIGHT = 1,
