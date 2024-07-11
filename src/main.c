@@ -42,9 +42,9 @@ void draw_menu(int width,int height);
 void draw_death();
 void draw_pause();
 void draw_pause_button();
+void drawgrid();
 
 // old helper function defs
-void drawgrid(Color);
 void drawWindowBoxMarker();
 void drawWindowBorder(Color);
 
@@ -68,6 +68,7 @@ int g_pause_button_height=0;
 unsigned int g_score;
 bool g_game_over = true;
 Color g_background_color = WHITE;
+Color g_grid_color = BLACK;
 
 int main(void)
 {
@@ -237,6 +238,12 @@ void draw_menu(int width,int height) {
 // Does the painting for GameState = DEATH
 void draw_death() {
 
+    ClearBackground(g_background_color);
+    
+    drawgrid();
+    draw_snake();
+    draw_score();
+
     // End game banner
         int bannerPadding = 150;
 
@@ -303,7 +310,7 @@ void draw_playing() {
 
     ClearBackground(g_background_color);
 
-    drawgrid(LIME);
+    drawgrid();
     drawWindowBorder(ORANGE);
 
     if (g_game_over) {
@@ -329,11 +336,12 @@ void draw_playing() {
 void draw_pause_button() {
 
     char titleText[6] = "Pause";
-    
+
     int titleY = 0;
     g_pause_button_height = g_screen_height/16;
     g_pause_button_width = MeasureText((char *)&titleText,g_pause_button_height);
-    int titleX = (g_screen_width-MeasureText((char *)&titleText,g_pause_button_height));
+    int screen_with_padding = g_grid_size*g_horizontal_grid_count;
+    int titleX = (screen_with_padding-MeasureText((char *)&titleText,g_pause_button_height));
 
     DrawText((char *)&titleText,titleX,titleY,g_pause_button_height,BLACK);
     
@@ -343,7 +351,17 @@ void draw_pause_button() {
 
 // Free all malloced memory of snake
 void destroy_global_variables() {
-    // TODO !!!
+    if (SNAKE == NULL) return;
+
+    SnakeBody* prev = SNAKE->head;
+    SnakeBody* current = prev->next;
+    for (size_t i = 1; i < SNAKE->size; i++)
+    {
+        free(prev);
+        prev = current;
+        current = current->next;
+    }
+    free(current);
 }
 
 // Helper function to convert hue to RGB
@@ -417,18 +435,30 @@ int food_is_colliding_snake() {
     return 0;
 }
 
+void computeScore(int size) {
+    int increase = 0;
+    if (size < 5) {
+        increase = 8;
+    } else if (size < 15) {
+        increase = 15;
+    } else {
+        increase = 25;
+    }
+    g_score += increase;
+}
+
 // Checks if the snake has eaten food
 void check_food_eaten() {
     if (SNAKE->head->posX == g_food.x && SNAKE->head->posY == g_food.y) {
         // Food eaten
         move_food_randomly();
         SNAKE->increase_length = true;
-        g_score += MIN(15,3*SNAKE->size);
+        computeScore(SNAKE->size);
     }
 }
 
 Color getColor(SnakeBody* bodyToPaint) {
-    return hslToRgb8(((double)bodyToPaint->index/15)*360,0.75,0.5);
+    return hslToRgb8(((double)bodyToPaint->index/30)*360,0.75,0.5);
 }
 
 // paints a standing body
@@ -574,27 +604,36 @@ void paint_snake_head_helper(SnakeBody* head, SnakeBody* next) {
 }
 
 void paint_snake_tail_helper(SnakeBody* tail, SnakeBody* secondLast) {
+    int centerSize = g_grid_size-2*g_margin_size;
     Vector2 topLeft =  {g_grid_size * (tail->posX)+g_margin_size, g_grid_size * (tail->posY)+g_margin_size};
     Vector2 size =  {g_grid_size-2*g_margin_size, g_grid_size-2*g_margin_size};
+    Vector2 circleTopLeft = {g_grid_size * (tail->posX)+(g_grid_size/2),g_grid_size * (tail->posY)+(g_grid_size/2)};
     switch (get_snake_relative_direction(tail,secondLast))
     {
     case UP:
-        size.y += g_margin_size;
+        topLeft.y += centerSize;
+        size.y = g_margin_size;
+        circleTopLeft.y += (centerSize/2);
         break;
     case RIGHT:
         topLeft.x -= g_margin_size;
-        size.x += g_margin_size;
+        size.x = g_margin_size;
+        circleTopLeft.x -= (centerSize/2);
         break;
     case DOWN:
         topLeft.y -= g_margin_size;
-        size.y += g_margin_size;
+        size.y = g_margin_size;
+        circleTopLeft.y -= (centerSize/2);
         break;
     default: // LEFT by default
-        size.x += g_margin_size;
+        topLeft.x += centerSize;
+        size.x = g_margin_size;
+        circleTopLeft.x += (centerSize/2);
         break;
     }
     Color color = getColor(tail);
     DrawRectangleV(topLeft,size,color);
+    DrawCircle(circleTopLeft.x,circleTopLeft.y,(g_grid_size-2*g_margin_size)/2,color);
 }
 
 // REQUIRES, first and second are at right angles
@@ -737,9 +776,8 @@ void handle_key_press() {
 
 // Draws the food on scren
 void draw_food() {
-    Vector2 topLeft =  {g_grid_size * (g_food.x), g_grid_size * (g_food.y)};
-    Vector2 size =  {g_grid_size, g_grid_size};
-    DrawRectangleV(topLeft,size,RED);
+    Vector2 topLeft =  {g_grid_size * (g_food.x)+g_grid_size/2, g_grid_size * (g_food.y)+g_grid_size/2};
+    DrawCircleV(topLeft,(g_grid_size/2)*0.7,RED);
 }
 
 // Places food at a random location on the map
@@ -864,7 +902,7 @@ void get_updated_vector(enum SnakeDirection direction, Position oldPosition,Posi
 
 // ====== OLD HELPERS ======
 // Draws the grid for snake game
-void drawgrid(Color gridColor) {
+void drawgrid() {
 
     // int columns = g_screen_width/g_grid_size;
     // int rows = g_screen_height/g_grid_size;
@@ -873,14 +911,14 @@ void drawgrid(Color gridColor) {
     {
         Vector2 columnStart = {g_grid_size * i, 0};
         Vector2 columnEnd = {g_grid_size * i, g_grid_size*g_vertical_grid_count};
-        DrawLineV(columnStart,columnEnd,gridColor);
+        DrawLineV(columnStart,columnEnd,g_grid_color);
     }
 
     for (size_t i = 0; i < g_vertical_grid_count; i++)
     {
         Vector2 rowStart = {0, g_grid_size * i};
         Vector2 rowEnd = {g_horizontal_grid_count*g_grid_size, g_grid_size * i};
-        DrawLineV(rowStart,rowEnd,gridColor);
+        DrawLineV(rowStart,rowEnd,g_grid_color);
     }
 }
 
