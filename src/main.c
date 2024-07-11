@@ -44,6 +44,8 @@ void drawWindowBoxMarker();
 void drawWindowBorder(Color);
 
 // GLOBALS
+double g_snake_movement_time = 0.4;
+
 int g_grid_size = 80;
 
 // computed globals
@@ -54,13 +56,14 @@ int g_margin_size = 30;
 int g_vertical_grid_count;
 int g_horizontal_grid_count;
 double g_last_snake_movement_time = 0;
-double g_snake_movement_time = 0.4;
+
 unsigned int g_score = 0;
 bool g_game_over = false;
 Color g_background_color = WHITE;
 
 int main(void)
 {
+    SetGesturesEnabled(GESTURE_SWIPE_UP | GESTURE_SWIPE_DOWN | GESTURE_SWIPE_RIGHT | GESTURE_SWIPE_LEFT);
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     InitWindow(g_screen_width, g_screen_height, "Simple Snake Game");
     initialize_global_variables();
@@ -460,18 +463,27 @@ void initialize_global_variables() {
 
 // Checks if user input is received
 void handle_key_press() {
-    if (IsKeyPressed(KEY_W) || IsKeyPressed(KEY_UP)) {
+    if (IsKeyPressed(KEY_W) ||
+        IsKeyPressed(KEY_UP) ||
+        IsGestureDetected(GESTURE_SWIPE_UP)) {
         change_snake_direction(UP);
     }
-    if (IsKeyPressed(KEY_A) || IsKeyPressed(KEY_LEFT)) {
+    if (IsKeyPressed(KEY_A) ||
+        IsKeyPressed(KEY_LEFT) ||
+        IsGestureDetected(GESTURE_SWIPE_LEFT)) {
         change_snake_direction(LEFT);
     }
-    if (IsKeyPressed(KEY_S) || IsKeyPressed(KEY_DOWN)) {
+    if (IsKeyPressed(KEY_S) ||
+        IsKeyPressed(KEY_DOWN) ||
+        IsGestureDetected(GESTURE_SWIPE_DOWN)) {
         change_snake_direction(DOWN);
     }
-    if (IsKeyPressed(KEY_D) || IsKeyPressed(KEY_RIGHT)) {
+    if (IsKeyPressed(KEY_D) ||
+        IsKeyPressed(KEY_RIGHT) ||
+        IsGestureDetected(GESTURE_SWIPE_RIGHT)) {
         change_snake_direction(RIGHT);
     }
+
     // TEMPORARY !!!
     if (IsKeyPressed(KEY_E)) {
         SNAKE->increase_length = true;
