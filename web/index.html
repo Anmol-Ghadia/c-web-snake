@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <!-- <iframe src="/bin/web/main.html" frameborder="0"></iframe> -->
+    <canvas class="emscripten" id="canvas" oncontextmenu="event.preventDefault()" tabindex=-1></canvas>
+</body>
+<script>
+    var statusElement = document.getElementById('status');
+    var progressElement = document.getElementById('progress');
+    var spinnerElement = document.getElementById('spinner');
+    var initialized = false;
+
+    var Module = {
+    onRuntimeInitialized: (function() {
+        initialized = true;
+        give_touch_input = Module.cwrap('give_touch_input', null, ['number','number']);
+    }),
+    print: (function() {
+        return (...args) => {
+            var text = args.join(' ');
+            console.log(text);
+        };
+    })(),
+    canvas: (() => {
+        var canvas = document.getElementById('canvas');
+
+        canvas.addEventListener("webglcontextlost", (e) => { alert('WebGL context lost. You will need to reload the page.'); e.preventDefault(); }, false);
+
+        return canvas;
+    })(),
+    setStatus: (text) => {
+        console.log(text);
+    },
+    totalDependencies: 0,
+    monitorRunDependencies: (left) => {
+        this.totalDependencies = Math.max(this.totalDependencies, left);
+        Module.setStatus(left ? 'Preparing... (' + (this.totalDependencies-left) + '/' + this.totalDependencies + ')' : 'All downloads complete.');
+    }
+    };
+    Module.setStatus('Downloading...');
+    window.onerror = (event) => {
+    // TODO: do not warn on ok events like simulating an infinite loop or exitStatus
+    Module.setStatus('Exception thrown, see JavaScript console');
+    spinnerElement.style.display = 'none';
+    Module.setStatus = (text) => {
+        if (text) console.error('[post-exception status] ' + text);
+    };
+    };
+</script>
+<script src="/bin/web/main.js"></script>
+<script src="/web/script.js"></script>
+<style>
+    * {
+        margin: 0px;
+        padding: 0px;
+        box-sizing: border-box;
+    }
+    body {
+        overflow: hidden;
+    }
+    iframe {
+        width: 100vw;
+        height: 100vh;
+    }
+</style>
+</html>

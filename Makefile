@@ -5,7 +5,7 @@ EMCC = emcc
 CFLAGS = -Wall -std=c99 -Iinclude
 LDFLAGS = -LlibDesktop -lraylib -lopengl32 -lgdi32 -lwinmm
 
-EMCCFLAGS = -Wall -std=c99 -Iinclude
+EMCCFLAGS = -Wall -std=c99 -Iinclude -sEXPORTED_FUNCTIONS=_main,_give_touch_input -sEXPORTED_RUNTIME_METHODS=ccall,cwrap
 EMLDFLAGS = -LlibWeb -lraylib -s USE_GLFW=3 -s WASM=1 -s FULL_ES2=1 -s ALLOW_MEMORY_GROWTH=1 -s ASYNCIFY
 
 # Source files

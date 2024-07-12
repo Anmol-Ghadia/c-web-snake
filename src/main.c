@@ -47,7 +47,7 @@ void toggle_theme();
 
 // old helper function defs
 void drawWindowBoxMarker();
-void drawWindowBorder(Color);
+void drawWindowBorder();
 
 // GLOBALS
 double g_snake_movement_time = 0.4;
@@ -57,8 +57,8 @@ double g_margin_ratio = 0.35;
 enum GameState g_game_state = MENU;
 int g_grid_size = 80;
 Position g_food = {0,0};
-int g_screen_width = 1280;
-int g_screen_height = 720;
+int g_screen_width = 900;
+int g_screen_height = 600;
 int g_margin_size;
 int g_vertical_grid_count;
 int g_horizontal_grid_count;
@@ -72,6 +72,16 @@ Color g_grid_color = GRAY;
 Color g_snake_head_color = RED;
 Color g_score_color = BLACK;
 Color g_pause_color = BLACK;
+Color g_border_color = BLACK;
+
+int g_extern_touch_x = 0;
+int g_extern_touch_y = 0;
+
+// sets the touch input
+void give_touch_input(int x, int y) {
+    g_extern_touch_x = x;
+    g_extern_touch_y = y;
+}
 
 void toggle_theme() {
     if (g_is_dark_theme) {
@@ -79,12 +89,15 @@ void toggle_theme() {
         g_background_color = WHITE;
         g_score_color = BLACK;
         g_pause_color = BLACK;
+        g_border_color = BLACK;
 
     } else {
         // set to dark
         g_background_color = BLACK;
         g_score_color = WHITE;
         g_pause_color = WHITE;
+        g_border_color = WHITE;
+        
     }
     g_is_dark_theme = !g_is_dark_theme;
 }
@@ -145,6 +158,8 @@ void update_draw_frame(void)
     }
 
     EndDrawing();
+    g_extern_touch_x = 0;
+    g_extern_touch_y = 0;
 }
 
 // draws the pause menu GameState = PAUSE
@@ -277,21 +292,32 @@ void draw_menu(int width,int height) {
         DrawText((char *)&startText,startX,startY,startFontHeight,RED);
 
     // CHECK START CLICKED
-        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-            bool cond_1 = startButtonX <= GetMouseX();
-            bool cond_2 = GetMouseX() <= startButtonX+startButtonWidth;
-            bool cond_3 = startButtonY <= GetMouseY();
-            bool cond_4 = GetMouseY() <= startButtonY+startButtonHeight;
+        // if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+        //     bool cond_1 = startButtonX <= GetMouseX();
+        //     bool cond_2 = GetMouseX() <= startButtonX+startButtonWidth;
+        //     bool cond_3 = startButtonY <= GetMouseY();
+        //     bool cond_4 = GetMouseY() <= startButtonY+startButtonHeight;
+        //     if (cond_1 && cond_2 && cond_3 && cond_4) {
+        //         g_game_state = PLAYING;
+        //     }
+        // } else if (IsGestureDetected(GESTURE_TAP)) {
+        //     bool cond_1 = startButtonX <= GetTouchX();
+        //     bool cond_2 = GetTouchX() <= startButtonX+startButtonWidth;
+        //     bool cond_3 = startButtonY <= GetTouchY();
+        //     bool cond_4 = GetTouchY() <= startButtonY+startButtonHeight;
+        //     if (cond_1 && cond_2 && cond_3 && cond_4) {
+        //         g_game_state = PLAYING;
+        //     }
+        // } else if (g_extern_touch_x != 0 && g_extern_touch_y != 0) {
+        if (g_extern_touch_x != 0 && g_extern_touch_y != 0) {
+            bool cond_1 = startButtonX <= g_extern_touch_x;
+            bool cond_2 = g_extern_touch_x <= startButtonX+startButtonWidth;
+            bool cond_3 = startButtonY <= g_extern_touch_y;
+            bool cond_4 = g_extern_touch_y <= startButtonY+startButtonHeight;
             if (cond_1 && cond_2 && cond_3 && cond_4) {
                 g_game_state = PLAYING;
-            }
-        } else if (IsGestureDetected(GESTURE_TAP)) {
-            bool cond_1 = startButtonX <= GetTouchX();
-            bool cond_2 = GetTouchX() <= startButtonX+startButtonWidth;
-            bool cond_3 = startButtonY <= GetTouchY();
-            bool cond_4 = GetTouchY() <= startButtonY+startButtonHeight;
-            if (cond_1 && cond_2 && cond_3 && cond_4) {
-                g_game_state = PLAYING;
+                g_extern_touch_x = 0;
+                g_extern_touch_y = 0;
             }
         }
 
@@ -320,21 +346,32 @@ void draw_menu(int width,int height) {
         }
 
     // CHECK theme toggled
-        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-            bool cond_1 = themeButtonX <= GetMouseX();
-            bool cond_2 = GetMouseX() <= themeButtonX+themeButtonWidth;
-            bool cond_3 = themeButtonY <= GetMouseY();
-            bool cond_4 = GetMouseY() <= themeButtonY+themeButtonHeight;
+        // if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+        //     bool cond_1 = themeButtonX <= GetMouseX();
+        //     bool cond_2 = GetMouseX() <= themeButtonX+themeButtonWidth;
+        //     bool cond_3 = themeButtonY <= GetMouseY();
+        //     bool cond_4 = GetMouseY() <= themeButtonY+themeButtonHeight;
+        //     if (cond_1 && cond_2 && cond_3 && cond_4) {
+        //         toggle_theme();
+        //     }
+        // } else if (IsGestureDetected(GESTURE_TAP)) {
+        //     bool cond_1 = themeButtonX <= GetTouchX();
+        //     bool cond_2 = GetTouchX() <= themeButtonX+themeButtonWidth;
+        //     bool cond_3 = themeButtonY <= GetTouchY();
+        //     bool cond_4 = GetTouchY() <= themeButtonY+themeButtonHeight;
+        //     if (cond_1 && cond_2 && cond_3 && cond_4) {
+        //         toggle_theme();
+        //     }
+        // } else if (g_extern_touch_x != 0 && g_extern_touch_y != 0) {
+        if (g_extern_touch_x != 0 && g_extern_touch_y != 0) {
+            bool cond_1 = themeButtonX <= g_extern_touch_x;
+            bool cond_2 = g_extern_touch_x <= themeButtonX+themeButtonWidth;
+            bool cond_3 = themeButtonY <= g_extern_touch_y;
+            bool cond_4 = g_extern_touch_y <= themeButtonY+themeButtonHeight;
             if (cond_1 && cond_2 && cond_3 && cond_4) {
                 toggle_theme();
-            }
-        } else if (IsGestureDetected(GESTURE_TAP)) {
-            bool cond_1 = themeButtonX <= GetTouchX();
-            bool cond_2 = GetTouchX() <= themeButtonX+themeButtonWidth;
-            bool cond_3 = themeButtonY <= GetTouchY();
-            bool cond_4 = GetTouchY() <= themeButtonY+themeButtonHeight;
-            if (cond_1 && cond_2 && cond_3 && cond_4) {
-                toggle_theme();
+                g_extern_touch_x = 0;
+                g_extern_touch_y = 0;
             }
         }
 }
@@ -347,6 +384,7 @@ void draw_death() {
     drawgrid();
     draw_snake();
     draw_score();
+    drawWindowBorder();
 
     // End game banner
         int bannerPadding = 150;
@@ -415,7 +453,7 @@ void draw_playing() {
     ClearBackground(g_background_color);
 
     drawgrid();
-    drawWindowBorder(ORANGE);
+    drawWindowBorder();
 
     if (g_game_over) {
 
@@ -1033,12 +1071,12 @@ void drawWindowBoxMarker() {
 }
 
 // Makes Lines on viewport
-void drawWindowBorder(Color color) {
+void drawWindowBorder() {
     int right_padding = g_screen_width - (g_horizontal_grid_count*g_grid_size);
     int bottom_padding = g_screen_height - (g_vertical_grid_count*g_grid_size);
 
-    DrawLine(0,0,g_screen_width-right_padding,0,color); // TOP
-    DrawLine(0,g_screen_height-bottom_padding-1,g_screen_width-right_padding,g_screen_height-bottom_padding-1,color); // BOTTOM
-    DrawLine(1,0,1,g_screen_height-bottom_padding,color); // LEFT
-    DrawLine(g_screen_width-right_padding,0,g_screen_width-right_padding,g_screen_height-bottom_padding,color); // RIGHT
+    DrawLine(0,0,g_screen_width-right_padding,0,g_border_color); // TOP
+    DrawLine(0,g_screen_height-bottom_padding-1,g_screen_width-right_padding,g_screen_height-bottom_padding-1,g_border_color); // BOTTOM
+    DrawLine(1,0,1,g_screen_height-bottom_padding,g_border_color); // LEFT
+    DrawLine(g_screen_width-right_padding,0,g_screen_width-right_padding,g_screen_height-bottom_padding,g_border_color); // RIGHT
 }
