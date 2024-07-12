@@ -6,19 +6,34 @@
     <title>Document</title>
 </head>
 <body>
-    <!-- <iframe src="/bin/web/main.html" frameborder="0"></iframe> -->
     <canvas class="emscripten" id="canvas" oncontextmenu="event.preventDefault()" tabindex=-1></canvas>
+    <style>
+        * {
+            margin: 0px;
+            padding: 0px;
+            box-sizing: border-box;
+        }
+        body {
+            position: relative;
+            overflow: hidden;
+        }
+        #fake-canvas {
+            position: absolute;
+            top: 0%;
+            width: 100vw;
+            height: 100vh;
+            /* background-color: black; */
+        }
+    </style>
 </body>
 <script>
-    var statusElement = document.getElementById('status');
-    var progressElement = document.getElementById('progress');
-    var spinnerElement = document.getElementById('spinner');
     var initialized = false;
 
     var Module = {
     onRuntimeInitialized: (function() {
         initialized = true;
         give_touch_input = Module.cwrap('give_touch_input', null, ['number','number']);
+        give_key_input = Module.cwrap('give_key_input', null, ['number']);
     }),
     print: (function() {
         return (...args) => {
@@ -46,7 +61,6 @@
     window.onerror = (event) => {
     // TODO: do not warn on ok events like simulating an infinite loop or exitStatus
     Module.setStatus('Exception thrown, see JavaScript console');
-    spinnerElement.style.display = 'none';
     Module.setStatus = (text) => {
         if (text) console.error('[post-exception status] ' + text);
     };
@@ -54,18 +68,4 @@
 </script>
 <script src="/bin/web/main.js"></script>
 <script src="/web/script.js"></script>
-<style>
-    * {
-        margin: 0px;
-        padding: 0px;
-        box-sizing: border-box;
-    }
-    body {
-        overflow: hidden;
-    }
-    iframe {
-        width: 100vw;
-        height: 100vh;
-    }
-</style>
 </html>

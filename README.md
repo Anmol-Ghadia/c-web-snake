@@ -5,27 +5,11 @@ A simple snake that targets Web using [`wasm`](https://webassembly.org/) and sta
 Find the Web version hosted here: [Demo](https://www.students.cs.ubc.ca/~aghadia/trialWasm/main.html)
 > Note: since the project is under development, the demo might not be the latest version.
 ## Build Guide
-
-### Using CLI
-Using git bash is the recommeded CLI on `windows`
-
-1) Web build
-    ```BASH
-    emcc src/main.c -o bin/main.html -Iinclude -Llib -lraylib -s USE_GLFW=3 -s WASM=1 -s FULL_ES2=1 -s ALLOW_MEMORY_GROWTH=1 -s ASYNCIFY
-    ```
-
-1) Desktop build
-    
-    `Windows:`
-    ```BASH
-    gcc src/main.c -o bin/desktop/main -Iinclude -LlibDesktop -lraylib -lopengl32 -lgdi32 -lwinmm
-    ```
-
-    `Unix:`
-    ```BASH
-    gcc src/main.c -o bin/desktop/main -Iinclude -LlibDesktop -lraylib -lm -lpthread -ldl -lrt -lX11
-    ```
-
+1) Make sure the following dependencies are installed first
+    1) emsdk
+    1) raylib is installed and compiled for web
+    1) GCC and Make if windows
+    `Note:` make file looks for raylib in D drive but modify it as per your installation
 ### Using Make
 1) Web build
     ```BASH
@@ -38,9 +22,9 @@ Using git bash is the recommeded CLI on `windows`
     `Note:` make file is configured to build for Windows, modify the file using command from above to build for Unix systems
 
 ## TODO
-1) Design Snake Head
-1) Add invisible buttons for movement on touch screens
 1) Refactor code
+1) ~~Design Snake Head~~
+1) ~~Add invisible buttons for movement on touch screens~~
 1) ~~Add some padding to pause button~~
 1) ~~Add Dark and light mode button on menu button~~
 1) ~~Fix margin_width, it should be a ratio instead of number of pixels~~

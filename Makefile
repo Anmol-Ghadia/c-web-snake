@@ -5,8 +5,8 @@ EMCC = emcc
 CFLAGS = -Wall -std=c99 -Iinclude
 LDFLAGS = -LlibDesktop -lraylib -lopengl32 -lgdi32 -lwinmm
 
-EMCCFLAGS = -Wall -std=c99 -Iinclude -sEXPORTED_FUNCTIONS=_main,_give_touch_input -sEXPORTED_RUNTIME_METHODS=ccall,cwrap
-EMLDFLAGS = -LlibWeb -lraylib -s USE_GLFW=3 -s WASM=1 -s FULL_ES2=1 -s ALLOW_MEMORY_GROWTH=1 -s ASYNCIFY
+EMCCFLAGS = -Wall -std=c99 -D_DEFAULT_SOURCE -Wno-missing-braces -Wunused-result -Os -I.
+EMLDFLAGS = -I D:/raylib/src -I D:/raylib/src/external -L. -L D:/raylib/src -s USE_GLFW=3 D:/raylib/src/web/libraylib.a -DPLATFORM_WEB -s EXPORTED_FUNCTIONS='["_main","_give_touch_input","_give_key_input"]' -s EXPORTED_RUNTIME_METHODS=ccall,cwrap
 
 # Source files
 SRCS = $(wildcard src/*.c)
