@@ -292,23 +292,7 @@ void draw_menu(int width,int height) {
         DrawText((char *)&startText,startX,startY,startFontHeight,RED);
 
     // CHECK START CLICKED
-        // if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-        //     bool cond_1 = startButtonX <= GetMouseX();
-        //     bool cond_2 = GetMouseX() <= startButtonX+startButtonWidth;
-        //     bool cond_3 = startButtonY <= GetMouseY();
-        //     bool cond_4 = GetMouseY() <= startButtonY+startButtonHeight;
-        //     if (cond_1 && cond_2 && cond_3 && cond_4) {
-        //         g_game_state = PLAYING;
-        //     }
-        // } else if (IsGestureDetected(GESTURE_TAP)) {
-        //     bool cond_1 = startButtonX <= GetTouchX();
-        //     bool cond_2 = GetTouchX() <= startButtonX+startButtonWidth;
-        //     bool cond_3 = startButtonY <= GetTouchY();
-        //     bool cond_4 = GetTouchY() <= startButtonY+startButtonHeight;
-        //     if (cond_1 && cond_2 && cond_3 && cond_4) {
-        //         g_game_state = PLAYING;
-        //     }
-        // } else if (g_extern_touch_x != 0 && g_extern_touch_y != 0) {
+#if defined(PLATFORM_WEB)
         if (g_extern_touch_x != 0 && g_extern_touch_y != 0) {
             bool cond_1 = startButtonX <= g_extern_touch_x;
             bool cond_2 = g_extern_touch_x <= startButtonX+startButtonWidth;
@@ -320,6 +304,25 @@ void draw_menu(int width,int height) {
                 g_extern_touch_y = 0;
             }
         }
+#else
+        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+            bool cond_1 = startButtonX <= GetMouseX();
+            bool cond_2 = GetMouseX() <= startButtonX+startButtonWidth;
+            bool cond_3 = startButtonY <= GetMouseY();
+            bool cond_4 = GetMouseY() <= startButtonY+startButtonHeight;
+            if (cond_1 && cond_2 && cond_3 && cond_4) {
+                g_game_state = PLAYING;
+            }
+        } else if (IsGestureDetected(GESTURE_TAP)) {
+            bool cond_1 = startButtonX <= GetTouchX();
+            bool cond_2 = GetTouchX() <= startButtonX+startButtonWidth;
+            bool cond_3 = startButtonY <= GetTouchY();
+            bool cond_4 = GetTouchY() <= startButtonY+startButtonHeight;
+            if (cond_1 && cond_2 && cond_3 && cond_4) {
+                g_game_state = PLAYING;
+            }
+        }
+#endif
 
     // Theme BUTTON
         char themeTextDark[10] = "DARK MODE";
@@ -346,23 +349,7 @@ void draw_menu(int width,int height) {
         }
 
     // CHECK theme toggled
-        // if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-        //     bool cond_1 = themeButtonX <= GetMouseX();
-        //     bool cond_2 = GetMouseX() <= themeButtonX+themeButtonWidth;
-        //     bool cond_3 = themeButtonY <= GetMouseY();
-        //     bool cond_4 = GetMouseY() <= themeButtonY+themeButtonHeight;
-        //     if (cond_1 && cond_2 && cond_3 && cond_4) {
-        //         toggle_theme();
-        //     }
-        // } else if (IsGestureDetected(GESTURE_TAP)) {
-        //     bool cond_1 = themeButtonX <= GetTouchX();
-        //     bool cond_2 = GetTouchX() <= themeButtonX+themeButtonWidth;
-        //     bool cond_3 = themeButtonY <= GetTouchY();
-        //     bool cond_4 = GetTouchY() <= themeButtonY+themeButtonHeight;
-        //     if (cond_1 && cond_2 && cond_3 && cond_4) {
-        //         toggle_theme();
-        //     }
-        // } else if (g_extern_touch_x != 0 && g_extern_touch_y != 0) {
+#if defined(PLATFORM_WEB)
         if (g_extern_touch_x != 0 && g_extern_touch_y != 0) {
             bool cond_1 = themeButtonX <= g_extern_touch_x;
             bool cond_2 = g_extern_touch_x <= themeButtonX+themeButtonWidth;
@@ -374,6 +361,25 @@ void draw_menu(int width,int height) {
                 g_extern_touch_y = 0;
             }
         }
+#else
+        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+            bool cond_1 = themeButtonX <= GetMouseX();
+            bool cond_2 = GetMouseX() <= themeButtonX+themeButtonWidth;
+            bool cond_3 = themeButtonY <= GetMouseY();
+            bool cond_4 = GetMouseY() <= themeButtonY+themeButtonHeight;
+            if (cond_1 && cond_2 && cond_3 && cond_4) {
+                toggle_theme();
+            }
+        } else if (IsGestureDetected(GESTURE_TAP)) {
+            bool cond_1 = themeButtonX <= GetTouchX();
+            bool cond_2 = GetTouchX() <= themeButtonX+themeButtonWidth;
+            bool cond_3 = themeButtonY <= GetTouchY();
+            bool cond_4 = GetTouchY() <= themeButtonY+themeButtonHeight;
+            if (cond_1 && cond_2 && cond_3 && cond_4) {
+                toggle_theme();
+            }
+        }
+#endif
 }
 
 // Does the painting for GameState = DEATH
