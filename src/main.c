@@ -43,6 +43,7 @@ void draw_death();
 void draw_pause();
 void draw_pause_button();
 void drawgrid();
+void toggle_theme();
 
 // old helper function defs
 void drawWindowBoxMarker();
@@ -50,15 +51,15 @@ void drawWindowBorder(Color);
 
 // GLOBALS
 double g_snake_movement_time = 0.4;
-
-int g_grid_size = 80;
+double g_margin_ratio = 0.35;
 
 // computed globals
 enum GameState g_game_state = MENU;
+int g_grid_size = 80;
 Position g_food = {0,0};
 int g_screen_width = 1280;
 int g_screen_height = 720;
-int g_margin_size = 30;
+int g_margin_size;
 int g_vertical_grid_count;
 int g_horizontal_grid_count;
 double g_last_snake_movement_time = 0;
@@ -66,9 +67,29 @@ int g_pause_button_width=0;
 int g_pause_button_height=0;
 
 unsigned int g_score;
+bool g_is_dark_theme = false;
 bool g_game_over = true;
 Color g_background_color = WHITE;
-Color g_grid_color = BLACK;
+Color g_grid_color = GRAY;
+Color g_snake_head_color = RED;
+Color g_score_color = BLACK;
+Color g_pause_color = BLACK;
+
+void toggle_theme() {
+    if (g_is_dark_theme) {
+        // set to light
+        g_background_color = WHITE;
+        g_score_color = BLACK;
+        g_pause_color = BLACK;
+
+    } else {
+        // set to dark
+        g_background_color = BLACK;
+        g_score_color = WHITE;
+        g_pause_color = WHITE;
+    }
+    g_is_dark_theme = !g_is_dark_theme;
+}
 
 int main(void)
 {
@@ -105,6 +126,7 @@ void update_draw_frame(void)
 
         // recompute global vargs
         g_grid_size = MIN(g_screen_width/g_horizontal_grid_count,g_screen_height/g_vertical_grid_count);
+        g_margin_size = ((double)g_grid_size)*g_margin_ratio;
     }
     BeginDrawing();
     
@@ -138,9 +160,9 @@ void draw_pause() {
         int titleFontSize = g_screen_height/6;
         int titleX = (g_screen_width-MeasureText((char *)&titleText,titleFontSize))/2;
 
-        DrawText((char *)&titleText,titleX,titleY,titleFontSize,BLACK);
+        DrawText((char *)&titleText,titleX,titleY,titleFontSize,g_background_color);
 
-    // START BUTTON
+    // Continue BUTTON
         char startText[5] = "play";
         
         int startY = g_screen_height/2;
@@ -156,7 +178,7 @@ void draw_pause() {
         int startButtonWidth = startFontWidth+2*startButtonSidePadding;
         int startButtonHeight = startFontHeight+2*startButtonUpDownPadding;
 
-        DrawRectangle(startButtonX,startButtonY,startButtonWidth,startButtonHeight,BLACK);
+        DrawRectangle(startButtonX,startButtonY,startButtonWidth,startButtonHeight,g_background_color);
         DrawText((char *)&startText,startX,startY,startFontHeight,RED);
     
     // CHECK START CLICKED
@@ -179,6 +201,49 @@ void draw_pause() {
                 g_game_state = PLAYING;
             }
         }
+
+    // Theme BUTTON
+        char themeTextDark[10] = "DARK MODE";
+        char themeTextLight[11] = "LIGHT MODE";
+        
+        int themeY = g_screen_height/2 + startButtonHeight + 10;
+        int themeFontHeight = g_screen_height/12;
+        int themeFontWidth = MeasureText((char *)&themeTextLight,themeFontHeight);
+        int themeX = (g_screen_width-themeFontWidth)/2;
+
+        int themeButtonSidePadding = 40;
+        int themeButtonUpDownPadding = 10;
+
+        int themeButtonX = themeX - themeButtonSidePadding;
+        int themeButtonY = themeY-themeButtonUpDownPadding;
+        int themeButtonWidth = themeFontWidth+2*themeButtonSidePadding;
+        int themeButtonHeight = themeFontHeight+2*themeButtonUpDownPadding;
+
+        DrawRectangle(themeButtonX,themeButtonY,themeButtonWidth,themeButtonHeight,g_background_color);
+        if (g_is_dark_theme) {
+            DrawText((char *)&themeTextLight,themeX,themeY,themeFontHeight,RED);
+        } else {
+            DrawText((char *)&themeTextDark,themeX+15,themeY,themeFontHeight,RED);
+        }
+
+    // CHECK theme toggled
+        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+            bool cond_1 = themeButtonX <= GetMouseX();
+            bool cond_2 = GetMouseX() <= themeButtonX+themeButtonWidth;
+            bool cond_3 = themeButtonY <= GetMouseY();
+            bool cond_4 = GetMouseY() <= themeButtonY+themeButtonHeight;
+            if (cond_1 && cond_2 && cond_3 && cond_4) {
+                toggle_theme();
+            }
+        } else if (IsGestureDetected(GESTURE_TAP)) {
+            bool cond_1 = themeButtonX <= GetTouchX();
+            bool cond_2 = GetTouchX() <= themeButtonX+themeButtonWidth;
+            bool cond_3 = themeButtonY <= GetTouchY();
+            bool cond_4 = GetTouchY() <= themeButtonY+themeButtonHeight;
+            if (cond_1 && cond_2 && cond_3 && cond_4) {
+                toggle_theme();
+            }
+        }
 }
 
 // Does the painting for GameState = MENU
@@ -192,7 +257,7 @@ void draw_menu(int width,int height) {
         int titleFontSize = height/6;
         int titleX = (width-MeasureText((char *)&titleText,titleFontSize))/2;
 
-        DrawText((char *)&titleText,titleX,titleY,titleFontSize,BLACK);
+        DrawText((char *)&titleText,titleX,titleY,titleFontSize,g_background_color);
 
     // START BUTTON
         char startText[6] = "START";
@@ -210,9 +275,9 @@ void draw_menu(int width,int height) {
         int startButtonWidth = startFontWidth+2*startButtonSidePadding;
         int startButtonHeight = startFontHeight+2*startButtonUpDownPadding;
 
-        DrawRectangle(startButtonX,startButtonY,startButtonWidth,startButtonHeight,BLACK);
+        DrawRectangle(startButtonX,startButtonY,startButtonWidth,startButtonHeight,g_background_color);
         DrawText((char *)&startText,startX,startY,startFontHeight,RED);
-    
+
     // CHECK START CLICKED
         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
             bool cond_1 = startButtonX <= GetMouseX();
@@ -222,15 +287,56 @@ void draw_menu(int width,int height) {
             if (cond_1 && cond_2 && cond_3 && cond_4) {
                 g_game_state = PLAYING;
             }
-        }
-
-        if (IsGestureDetected(GESTURE_TAP)) {
+        } else if (IsGestureDetected(GESTURE_TAP)) {
             bool cond_1 = startButtonX <= GetTouchX();
             bool cond_2 = GetTouchX() <= startButtonX+startButtonWidth;
             bool cond_3 = startButtonY <= GetTouchY();
             bool cond_4 = GetTouchY() <= startButtonY+startButtonHeight;
             if (cond_1 && cond_2 && cond_3 && cond_4) {
                 g_game_state = PLAYING;
+            }
+        }
+
+    // Theme BUTTON
+        char themeTextDark[10] = "DARK MODE";
+        char themeTextLight[11] = "LIGHT MODE";
+        
+        int themeY = height/2 + startButtonHeight + 10;
+        int themeFontHeight = height/12;
+        int themeFontWidth = MeasureText((char *)&themeTextLight,themeFontHeight);
+        int themeX = (width-themeFontWidth)/2;
+
+        int themeButtonSidePadding = 40;
+        int themeButtonUpDownPadding = 10;
+
+        int themeButtonX = themeX - themeButtonSidePadding;
+        int themeButtonY = themeY-themeButtonUpDownPadding;
+        int themeButtonWidth = themeFontWidth+2*themeButtonSidePadding;
+        int themeButtonHeight = themeFontHeight+2*themeButtonUpDownPadding;
+
+        DrawRectangle(themeButtonX,themeButtonY,themeButtonWidth,themeButtonHeight,g_background_color);
+        if (g_is_dark_theme) {
+            DrawText((char *)&themeTextLight,themeX,themeY,themeFontHeight,RED);
+        } else {
+            DrawText((char *)&themeTextDark,themeX+15,themeY,themeFontHeight,RED);
+        }
+
+    // CHECK theme toggled
+        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+            bool cond_1 = themeButtonX <= GetMouseX();
+            bool cond_2 = GetMouseX() <= themeButtonX+themeButtonWidth;
+            bool cond_3 = themeButtonY <= GetMouseY();
+            bool cond_4 = GetMouseY() <= themeButtonY+themeButtonHeight;
+            if (cond_1 && cond_2 && cond_3 && cond_4) {
+                toggle_theme();
+            }
+        } else if (IsGestureDetected(GESTURE_TAP)) {
+            bool cond_1 = themeButtonX <= GetTouchX();
+            bool cond_2 = GetTouchX() <= themeButtonX+themeButtonWidth;
+            bool cond_3 = themeButtonY <= GetTouchY();
+            bool cond_4 = GetTouchY() <= themeButtonY+themeButtonHeight;
+            if (cond_1 && cond_2 && cond_3 && cond_4) {
+                toggle_theme();
             }
         }
 }
@@ -258,7 +364,7 @@ void draw_death() {
         int scoreFontSize = g_screen_height/8;
         int scoreX = (g_screen_width-MeasureText(score,scoreFontSize))/2;
 
-        DrawText(score,scoreX,scoreY,scoreFontSize,BLACK);
+        DrawText(score,scoreX,scoreY,scoreFontSize,g_background_color);
 
     // back button
         char startText[13] = "back to Menu";
@@ -276,7 +382,7 @@ void draw_death() {
         int startButtonWidth = startFontWidth+2*startButtonSidePadding;
         int startButtonHeight = startFontHeight+2*startButtonUpDownPadding;
 
-        DrawRectangle(startButtonX,startButtonY,startButtonWidth,startButtonHeight,BLACK);
+        DrawRectangle(startButtonX,startButtonY,startButtonWidth,startButtonHeight,g_background_color);
         DrawText((char *)&startText,startX,startY,startFontHeight,RED);
     
     // CHECK START CLICKED
@@ -343,7 +449,7 @@ void draw_pause_button() {
     int screen_with_padding = g_grid_size*g_horizontal_grid_count;
     int titleX = (screen_with_padding-MeasureText((char *)&titleText,g_pause_button_height));
 
-    DrawText((char *)&titleText,titleX,titleY,g_pause_button_height,BLACK);
+    DrawText((char *)&titleText,titleX,titleY,g_pause_button_height,g_pause_color);
     
 }
 
@@ -402,7 +508,7 @@ void draw_score() {
     const char* str_pointer = &buffer[0];
 
     sprintf(buffer, "%d", g_score);
-    DrawText(str_pointer,g_margin_size,g_margin_size,g_grid_size-g_margin_size,BLACK);
+    DrawText(str_pointer,g_margin_size,g_margin_size,g_grid_size-g_margin_size,g_score_color);
 }
 
 // sets g_game_over if snake has eaten itself 
@@ -599,7 +705,7 @@ void paint_snake_head_helper(SnakeBody* head, SnakeBody* next) {
         break;
     }
 
-    DrawRectangleV(topLeft,size,BLACK);
+    DrawRectangleV(topLeft,size,g_snake_head_color);
     g_margin_size += 5;
 }
 
@@ -689,6 +795,7 @@ void initialize_global_variables() {
     // Vars
     g_vertical_grid_count = g_screen_height/g_grid_size;
     g_horizontal_grid_count = g_screen_width/g_grid_size;
+    g_margin_size = ((double)g_grid_size)*g_margin_ratio;
 
     // SNAKE
 

@@ -38,7 +38,12 @@ Using git bash is the recommeded CLI on `windows`
     `Note:` make file is configured to build for Windows, modify the file using command from above to build for Unix systems
 
 ## TODO
-1) Fix margin_width, it should be a ratio instead of number of pixels
+1) Design Snake Head
+1) Add some padding to pause button
+1) Add invisible buttons for movement on touch screens
+1) Refactor code
+1) ~~Add Dark and light mode button on menu button~~
+1) ~~Fix margin_width, it should be a ratio instead of number of pixels~~
 1) ~~Add rounded cap on tail~~
 1) ~~Fix snake coloring which turns black after certain length~~
 1) ~~Add styling for head~~
