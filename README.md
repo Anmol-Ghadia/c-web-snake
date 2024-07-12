@@ -39,9 +39,9 @@ Using git bash is the recommeded CLI on `windows`
 
 ## TODO
 1) Design Snake Head
-1) Add some padding to pause button
 1) Add invisible buttons for movement on touch screens
 1) Refactor code
+1) ~~Add some padding to pause button~~
 1) ~~Add Dark and light mode button on menu button~~
 1) ~~Fix margin_width, it should be a ratio instead of number of pixels~~
 1) ~~Add rounded cap on tail~~

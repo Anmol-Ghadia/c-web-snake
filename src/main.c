@@ -63,8 +63,6 @@ int g_margin_size;
 int g_vertical_grid_count;
 int g_horizontal_grid_count;
 double g_last_snake_movement_time = 0;
-int g_pause_button_width=0;
-int g_pause_button_height=0;
 
 unsigned int g_score;
 bool g_is_dark_theme = false;
@@ -443,14 +441,31 @@ void draw_pause_button() {
 
     char titleText[6] = "Pause";
 
-    int titleY = 0;
-    g_pause_button_height = g_screen_height/16;
-    g_pause_button_width = MeasureText((char *)&titleText,g_pause_button_height);
-    int screen_with_padding = g_grid_size*g_horizontal_grid_count;
-    int titleX = (screen_with_padding-MeasureText((char *)&titleText,g_pause_button_height));
+    int titleY = 0 + g_margin_size;
+    int pause_button_height = g_screen_height/16;
+    int pause_button_width = MeasureText((char *)&titleText,pause_button_height);
+    int screen_with_padding = g_grid_size*g_horizontal_grid_count-g_margin_size;
+    int titleX = (screen_with_padding-MeasureText((char *)&titleText,pause_button_height));
 
-    DrawText((char *)&titleText,titleX,titleY,g_pause_button_height,g_pause_color);
+    DrawText((char *)&titleText,titleX,titleY,pause_button_height,g_pause_color);
     
+    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+        bool cond_1 = titleX < GetMouseX();
+        bool cond_2 = GetMouseX() < titleX+pause_button_width;
+        bool cond_3 = titleY < GetMouseY();
+        bool cond_4 = GetMouseY() < pause_button_height+titleY;
+        if (cond_1 && cond_2 && cond_3 && cond_4) {
+            g_game_state = PAUSE;
+        }
+    } else if (IsGestureDetected(GESTURE_TAP)) {
+        bool cond_1 = titleX < GetTouchX();
+        bool cond_2 = GetTouchX() < titleX+pause_button_width;
+        bool cond_3 = titleY < GetTouchY();
+        bool cond_4 = GetTouchY() < pause_button_height+titleY;
+        if (cond_1 && cond_2 && cond_3 && cond_4) {
+            g_game_state = PAUSE;
+        }
+    }
 }
 
 // ====== HELPER FUNCTIONS ======
@@ -852,24 +867,6 @@ void handle_key_press() {
     }
     if (IsKeyPressed(KEY_SPACE)) {
         g_game_state = PAUSE;
-    }
-    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-        bool cond_1 = g_screen_width-g_pause_button_width < GetMouseX();
-        bool cond_2 = GetMouseX() < g_screen_width;
-        bool cond_3 = 0 < GetMouseY();
-        bool cond_4 = GetMouseY() < g_pause_button_height;
-        if (cond_1 && cond_2 && cond_3 && cond_4) {
-            g_game_state = PAUSE;
-        }
-    }
-    if (IsGestureDetected(GESTURE_TAP)) {
-        bool cond_1 = g_screen_width-g_pause_button_width < GetTouchX();
-        bool cond_2 = GetTouchX() < g_screen_width;
-        bool cond_3 = 0 < GetTouchY();
-        bool cond_4 = GetTouchY() < g_pause_button_height;
-        if (cond_1 && cond_2 && cond_3 && cond_4) {
-            g_game_state = PAUSE;
-        }
     }
 
     // TEMPORARY !!!
