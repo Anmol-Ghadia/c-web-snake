@@ -4,18 +4,10 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <time.h>
-
-// Libs
-#include "raylib.h"
-
 #if defined(PLATFORM_WEB)
     #include <emscripten/emscripten.h>
 #endif
-
-// Helper Files
-#include "snake.h"
-
-#define MIN(a, b) ((a) < (b) ? (a) : (b))
+#include "main.h"
 
 // Function defs
 void update_draw_frame(void);
@@ -38,7 +30,7 @@ enum SnakeDirection get_snake_relative_direction(SnakeBody*, SnakeBody*);
 void print_error_body(SnakeBody*);
 void draw_score();
 void draw_playing();
-void draw_menu(int width,int height);
+void draw_menu();
 void draw_death();
 void draw_pause();
 void draw_pause_button();
@@ -49,33 +41,6 @@ void toggle_theme();
 void drawWindowBoxMarker();
 void drawWindowBorder();
 
-// GLOBALS
-double g_snake_movement_time = 0.4;
-double g_margin_ratio = 0.35;
-
-// computed globals
-enum GameState g_game_state = MENU;
-int g_grid_size = 80;
-Position g_food = {0,0};
-int g_screen_width = 900;
-int g_screen_height = 600;
-int g_margin_size;
-int g_vertical_grid_count;
-int g_horizontal_grid_count;
-double g_last_snake_movement_time = 0;
-
-unsigned int g_score;
-bool g_is_dark_theme = false;
-bool g_game_over = true;
-Color g_background_color = WHITE;
-Color g_grid_color = GRAY;
-Color g_snake_head_color = RED;
-Color g_score_color = BLACK;
-Color g_pause_color = BLACK;
-Color g_border_color = BLACK;
-
-int g_extern_touch_x = 0;
-int g_extern_touch_y = 0;
 
 // sets the touch input
 // used by external api
@@ -107,6 +72,93 @@ void give_key_input(unsigned int dir) {
         break;
     }
 }
+
+// ==================================================
+
+// Draws the title of a window
+// ex. Menu screen, pause screen
+void draw_window_title(char *ptr_text) {
+    
+    int titleY = GetScreenHeight()/6;
+    int titleFontSize = GetScreenHeight()/6;
+    int titleX = (GetScreenWidth()-MeasureText(ptr_text,titleFontSize))/2;
+
+    DrawText(ptr_text,titleX,titleY,titleFontSize,g_background_color);
+}
+
+// Draws the button with given text and offset
+// Returns the bounding box of text button
+Rectangle draw_button(char *ptr_text,unsigned int index) {
+    
+    int buttonSidePadding = 40;
+    int buttonUpDownPadding = 10;
+    
+    int offsetY = index*(g_screen_height/12 + 2*buttonUpDownPadding+ 10);
+    
+    int fontY = g_screen_height/2 + offsetY;
+    int fontHeight = g_screen_height/12;
+    int fontWidth = MeasureText(ptr_text,fontHeight);
+    int fontX = (g_screen_width-fontWidth)/2;
+
+    Rectangle buttonBox = {
+        fontX - buttonSidePadding,
+        fontY-buttonUpDownPadding,
+        fontWidth+2*buttonSidePadding,
+        fontHeight+2*buttonUpDownPadding
+    };
+
+    DrawRectangle(buttonBox.x,buttonBox.y,buttonBox.width,buttonBox.height,g_background_color);
+    DrawText(ptr_text,fontX,fontY,fontHeight,RED);
+    return buttonBox;
+}
+
+// Returns true if the button is clicked
+// works for both web and desktop 
+bool is_button_clicked(Rectangle button) {
+#if defined(PLATFORM_WEB)
+    if (g_extern_touch_x != 0 && g_extern_touch_y != 0) {
+        Vector2 point = {g_extern_touch_x,g_extern_touch_y};
+        if (CheckCollisionPointRec(point,button)) {
+            g_extern_touch_x = 0;
+            g_extern_touch_y = 0;
+            return true;
+        }
+    }
+#else
+    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+        if (CheckCollisionPointRec(GetMousePosition(),button)) {
+            return true;
+        }
+    }
+#endif
+    return false;
+}
+
+// Draws the menu on screen and checks if button is pressed
+void draw_menu() {
+    ClearBackground(RED);
+
+    // Menu title
+    draw_window_title("SNAKE GAME");
+
+    // Start Game
+    Rectangle startButton = draw_button("START",0);
+    if (is_button_clicked(startButton)) {
+        g_game_state = PLAYING;
+    }
+
+    // Theme Toggle
+    Rectangle themeButton;
+    if (g_is_dark_theme) {
+        themeButton = draw_button("LIGHT MODE",1);
+    } else {
+        themeButton = draw_button("DARK MODE",1);
+    }
+    if (is_button_clicked(themeButton)) {
+        toggle_theme();
+    }
+}
+// ==================================================
 
 void toggle_theme() {
     if (g_is_dark_theme) {
@@ -175,7 +227,7 @@ void update_draw_frame(void)
     switch (g_game_state)
     {
     case MENU:
-        draw_menu(g_screen_width,g_screen_height);
+        draw_menu();
         break;
     case PLAYING:
         draw_playing();
@@ -266,129 +318,6 @@ void draw_pause() {
         int themeFontHeight = g_screen_height/12;
         int themeFontWidth = MeasureText((char *)&themeTextLight,themeFontHeight);
         int themeX = (g_screen_width-themeFontWidth)/2;
-
-        int themeButtonSidePadding = 40;
-        int themeButtonUpDownPadding = 10;
-
-        int themeButtonX = themeX - themeButtonSidePadding;
-        int themeButtonY = themeY-themeButtonUpDownPadding;
-        int themeButtonWidth = themeFontWidth+2*themeButtonSidePadding;
-        int themeButtonHeight = themeFontHeight+2*themeButtonUpDownPadding;
-
-        DrawRectangle(themeButtonX,themeButtonY,themeButtonWidth,themeButtonHeight,g_background_color);
-        if (g_is_dark_theme) {
-            DrawText((char *)&themeTextLight,themeX,themeY,themeFontHeight,RED);
-        } else {
-            DrawText((char *)&themeTextDark,themeX+15,themeY,themeFontHeight,RED);
-        }
-
-    // CHECK theme toggled
-#if defined(PLATFORM_WEB)
-        if (g_extern_touch_x != 0 && g_extern_touch_y != 0) {
-            bool cond_1 = themeButtonX <= g_extern_touch_x;
-            bool cond_2 = g_extern_touch_x <= themeButtonX+themeButtonWidth;
-            bool cond_3 = themeButtonY <= g_extern_touch_y;
-            bool cond_4 = g_extern_touch_y <= themeButtonY+themeButtonHeight;
-            if (cond_1 && cond_2 && cond_3 && cond_4) {
-                toggle_theme();
-                g_extern_touch_x = 0;
-                g_extern_touch_y = 0;
-            }
-        }
-#else
-        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-            bool cond_1 = themeButtonX <= GetMouseX();
-            bool cond_2 = GetMouseX() <= themeButtonX+themeButtonWidth;
-            bool cond_3 = themeButtonY <= GetMouseY();
-            bool cond_4 = GetMouseY() <= themeButtonY+themeButtonHeight;
-            if (cond_1 && cond_2 && cond_3 && cond_4) {
-                toggle_theme();
-            }
-        } else if (IsGestureDetected(GESTURE_TAP)) {
-            bool cond_1 = themeButtonX <= GetTouchX();
-            bool cond_2 = GetTouchX() <= themeButtonX+themeButtonWidth;
-            bool cond_3 = themeButtonY <= GetTouchY();
-            bool cond_4 = GetTouchY() <= themeButtonY+themeButtonHeight;
-            if (cond_1 && cond_2 && cond_3 && cond_4) {
-                toggle_theme();
-            }
-        }
-#endif
-}
-
-// Does the painting for GameState = MENU
-void draw_menu(int width,int height) {
-    ClearBackground(RED);
-
-    // GAME TITLE
-        char titleText[11] = "Snake Game";
-        
-        int titleY = height/6;
-        int titleFontSize = height/6;
-        int titleX = (width-MeasureText((char *)&titleText,titleFontSize))/2;
-
-        DrawText((char *)&titleText,titleX,titleY,titleFontSize,g_background_color);
-
-    // START BUTTON
-        char startText[6] = "START";
-        
-        int startY = height/2;
-        int startFontHeight = height/12;
-        int startFontWidth = MeasureText((char *)&startText,startFontHeight);
-        int startX = (width-startFontWidth)/2;
-
-        int startButtonSidePadding = 40;
-        int startButtonUpDownPadding = 10;
-
-        int startButtonX = startX - startButtonSidePadding;
-        int startButtonY = startY-startButtonUpDownPadding;
-        int startButtonWidth = startFontWidth+2*startButtonSidePadding;
-        int startButtonHeight = startFontHeight+2*startButtonUpDownPadding;
-
-        DrawRectangle(startButtonX,startButtonY,startButtonWidth,startButtonHeight,g_background_color);
-        DrawText((char *)&startText,startX,startY,startFontHeight,RED);
-
-    // CHECK START CLICKED
-#if defined(PLATFORM_WEB)
-        if (g_extern_touch_x != 0 && g_extern_touch_y != 0) {
-            bool cond_1 = startButtonX <= g_extern_touch_x;
-            bool cond_2 = g_extern_touch_x <= startButtonX+startButtonWidth;
-            bool cond_3 = startButtonY <= g_extern_touch_y;
-            bool cond_4 = g_extern_touch_y <= startButtonY+startButtonHeight;
-            if (cond_1 && cond_2 && cond_3 && cond_4) {
-                g_game_state = PLAYING;
-                g_extern_touch_x = 0;
-                g_extern_touch_y = 0;
-            }
-        }
-#else
-        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-            bool cond_1 = startButtonX <= GetMouseX();
-            bool cond_2 = GetMouseX() <= startButtonX+startButtonWidth;
-            bool cond_3 = startButtonY <= GetMouseY();
-            bool cond_4 = GetMouseY() <= startButtonY+startButtonHeight;
-            if (cond_1 && cond_2 && cond_3 && cond_4) {
-                g_game_state = PLAYING;
-            }
-        } else if (IsGestureDetected(GESTURE_TAP)) {
-            bool cond_1 = startButtonX <= GetTouchX();
-            bool cond_2 = GetTouchX() <= startButtonX+startButtonWidth;
-            bool cond_3 = startButtonY <= GetTouchY();
-            bool cond_4 = GetTouchY() <= startButtonY+startButtonHeight;
-            if (cond_1 && cond_2 && cond_3 && cond_4) {
-                g_game_state = PLAYING;
-            }
-        }
-#endif
-
-    // Theme BUTTON
-        char themeTextDark[10] = "DARK MODE";
-        char themeTextLight[11] = "LIGHT MODE";
-        
-        int themeY = height/2 + startButtonHeight + 10;
-        int themeFontHeight = height/12;
-        int themeFontWidth = MeasureText((char *)&themeTextLight,themeFontHeight);
-        int themeX = (width-themeFontWidth)/2;
 
         int themeButtonSidePadding = 40;
         int themeButtonUpDownPadding = 10;

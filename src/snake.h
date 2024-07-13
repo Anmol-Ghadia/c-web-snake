@@ -42,7 +42,4 @@ typedef struct Snake {
 // GLOBALS
 Snake* SNAKE;
 
-// Interface
-// TODO !!!
-
 #endif // SNAKE_H
