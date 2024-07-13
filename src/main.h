@@ -26,6 +26,7 @@ enum GameState g_game_state = MENU;
 Position g_food = {0,0};
 bool g_is_dark_theme = false;
 bool g_game_over = true;
+Rectangle g_screen_padding = {0,0,0,0};
 Color g_background_color = WHITE;
 Color g_grid_color = GRAY;
 Color g_snake_head_color = RED;

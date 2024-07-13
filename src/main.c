@@ -21,17 +21,14 @@ void update_snake();
 void get_updated_vector(enum SnakeDirection, Position, Position*);
 void destroy_global_variables();
 int round_world_coordinates(int, int);
-void move_food_randomly();
+void place_new_food();
 void draw_food();
-void check_food_eaten();
-int food_is_colliding_snake(); 
-void check_body_eaten();
 enum SnakeDirection get_snake_relative_direction(SnakeBody*, SnakeBody*);
 void print_error_body(SnakeBody*);
 void draw_score();
 void draw_playing();
 void drawgrid();
-void toggle_theme();
+void toggle_dark_theme();
 
 // old helper function defs
 void drawWindowBoxMarker();
@@ -70,6 +67,124 @@ void give_key_input(unsigned int dir) {
 }
 
 // ==================================================
+// ====== HELPERS ========
+
+// Toggles the dark theme 
+void toggle_dark_theme() {
+    if (g_is_dark_theme) {
+        // set to light
+        g_background_color = WHITE;
+        g_score_color = BLACK;
+        g_pause_color = BLACK;
+        g_border_color = BLACK;
+
+    } else {
+        // set to dark
+        g_background_color = BLACK;
+        g_score_color = WHITE;
+        g_pause_color = WHITE;
+        g_border_color = WHITE;
+        
+    }
+    g_is_dark_theme = !g_is_dark_theme;
+}
+
+// Helper function to convert hue to RGB
+float hueToRgb(float p, float q, float t) {
+    if (t < 0) t += 1;
+    if (t > 1) t -= 1;
+    if (t < 1.0 / 6) return p + (q - p) * 6 * t;
+    if (t < 1.0 / 2) return q;
+    if (t < 2.0 / 3) return p + (q - p) * (2.0 / 3 - t) * 6;
+    return p;
+}
+
+// Function to convert HSL to RGB8
+Color hslToRgb8(float h, float s, float l) {
+    float r, g, b;
+
+    if (s == 0) {
+        r = g = b = l; // Achromatic
+    } else {
+        float q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+        float p = 2 * l - q;
+        r = hueToRgb(p, q, h / 360 + 1.0 / 3);
+        g = hueToRgb(p, q, h / 360);
+        b = hueToRgb(p, q, h / 360 - 1.0 / 3);
+    }
+
+    Color rgb8;
+    rgb8.r = (unsigned char)(r * 255);
+    rgb8.g = (unsigned char)(g * 255);
+    rgb8.b = (unsigned char)(b * 255);
+    rgb8.a = 255;
+
+    return rgb8;
+}
+
+// Returns a color corresponding to a snake index
+Color get_color_for_index(SnakeBody* bodyToPaint) {
+    return hslToRgb8(((double)bodyToPaint->index/30)*360,0.75,0.5);
+}
+
+// checks if snake as eaten itself
+bool is_snake_dead() {
+    if (SNAKE->size < 2) return false;
+
+    SnakeBody* head = SNAKE->head;
+    SnakeBody* current = head->next;
+    for (size_t i = 1; i < SNAKE->size; i++)
+    {
+        if (head->posX == current->posX && head->posY == current->posY) {
+            return true;
+        }
+        current = current->next;
+    }
+    return false;
+}
+
+// Returns true if food is colliding with snake
+bool is_food_colliding_snake() {
+    SnakeBody* current = SNAKE->head;
+    for (size_t i = 0; i < SNAKE->size; i++)
+    {
+        if (current->posX == g_food.x && current->posY == g_food.y) {
+            return true;
+        }
+        current = current->next;
+    }
+    return false;
+}
+
+// Places food at a random location on the map that
+//   does not collide the snake
+void place_new_food() {
+    g_food.x = GetRandomValue(0,g_horizontal_grid_count-1);
+    g_food.y = GetRandomValue(0,g_vertical_grid_count-1);
+    if (is_food_colliding_snake()) {
+        place_new_food();
+    }
+}
+
+// TODO !!!
+// computes the score and updates
+void computeScore(int size) {
+    int increase = 0;
+    if (size < 5) {
+        increase = 8;
+    } else if (size < 15) {
+        increase = 15;
+    } else {
+        increase = 25;
+    }
+    g_score += increase;
+}
+
+// Checks if the snake has eaten food
+bool check_food_eaten() {
+    return (SNAKE->head->posX == g_food.x && SNAKE->head->posY == g_food.y);
+}
+
 
 // Draws the title of a window
 // ex. Menu screen, pause screen
@@ -89,12 +204,12 @@ Rectangle draw_button(char *ptr_text,unsigned int index) {
     int buttonSidePadding = 40;
     int buttonUpDownPadding = 10;
     
-    int offsetY = index*(g_screen_height/12 + 2*buttonUpDownPadding+ 10);
+    int offsetY = index*(GetScreenHeight()/12 + 2*buttonUpDownPadding+ 10);
     
-    int fontY = g_screen_height/2 + offsetY;
-    int fontHeight = g_screen_height/12;
+    int fontY = GetScreenHeight()/2 + offsetY;
+    int fontHeight = GetScreenHeight()/12;
     int fontWidth = MeasureText(ptr_text,fontHeight);
-    int fontX = (g_screen_width-fontWidth)/2;
+    int fontX = (GetScreenWidth()-fontWidth)/2;
 
     Rectangle buttonBox = {
         fontX - buttonSidePadding,
@@ -128,85 +243,6 @@ bool is_button_clicked(Rectangle button) {
     }
 #endif
     return false;
-}
-
-// Draws the menu on screen and checks if button is pressed
-void draw_menu() {
-    ClearBackground(RED);
-
-    // Menu title
-    draw_window_title("CLASSIC SNAKE");
-
-    // Start Game
-    Rectangle startButton = draw_button("START",0);
-    if (is_button_clicked(startButton)) {
-        g_game_state = PLAYING;
-    }
-
-    // Theme Toggle
-    Rectangle themeButton;
-    if (g_is_dark_theme) {
-        themeButton = draw_button("LIGHT MODE",1);
-    } else {
-        themeButton = draw_button("DARK MODE",1);
-    }
-    if (is_button_clicked(themeButton)) {
-        toggle_theme();
-    }
-}
-
-// draws the pause menu when game is paused
-void draw_pause() {
-    ClearBackground(RED);
-
-    // window title
-    draw_window_title("GAME PAUSED");
-
-    // Continue button
-    Rectangle continueButton = draw_button("PLAY",0);
-    if (is_button_clicked(continueButton)) {
-        g_game_state = PLAYING;
-    }
-
-    // Theme Toggle
-    Rectangle themeButton;
-    if (g_is_dark_theme) {
-        themeButton = draw_button("LIGHT MODE",1);
-    } else {
-        themeButton = draw_button("DARK MODE",1);
-    }
-    if (is_button_clicked(themeButton)) {
-        toggle_theme();
-    }
-}
-
-// Draws the death screen when snake is dead
-void draw_death() {
-
-    ClearBackground(g_background_color);
-    
-    drawgrid();
-    draw_snake();
-    draw_score();
-    drawWindowBorder();
-
-    // End game banner
-    int bannerPadding = GetScreenHeight()/7;
-
-    DrawRectangle(bannerPadding,bannerPadding,g_screen_width-2*bannerPadding,g_screen_height-2*bannerPadding,Fade(RED,0.85));
-
-    // SCORE display
-    char buffer[10];
-    char* score = &buffer[0];
-    sprintf(buffer, "SCORE: %d", g_score);
-    
-    draw_window_title(score);
-
-    // back button
-    Rectangle backButton = draw_button("BACK TO MENU",0);
-    if (is_button_clicked(backButton)) {
-        g_game_state = MENU;
-    }
 }
 
 // draws the pause button when game is being played
@@ -259,26 +295,104 @@ void draw_score() {
     sprintf(buffer, "%d", g_score);
     DrawText(ptr_score,g_margin_size,g_margin_size,g_grid_size-g_margin_size,g_score_color);
 }
-// ==================================================
 
-void toggle_theme() {
-    if (g_is_dark_theme) {
-        // set to light
-        g_background_color = WHITE;
-        g_score_color = BLACK;
-        g_pause_color = BLACK;
-        g_border_color = BLACK;
+// Free all malloced memory of snake
+void destroy_global_variables() {
+    if (SNAKE == NULL) return;
 
-    } else {
-        // set to dark
-        g_background_color = BLACK;
-        g_score_color = WHITE;
-        g_pause_color = WHITE;
-        g_border_color = WHITE;
-        
+    SnakeBody* prev = SNAKE->head;
+    SnakeBody* current = prev->next;
+    for (size_t i = 1; i < SNAKE->size; i++)
+    {
+        free(prev);
+        prev = current;
+        current = current->next;
     }
-    g_is_dark_theme = !g_is_dark_theme;
+    free(current);
 }
+
+// ===== Main functions =========
+
+// Draws the menu on screen and checks if button is pressed
+void draw_menu() {
+    ClearBackground(RED);
+
+    // Menu title
+    draw_window_title("CLASSIC SNAKE");
+
+    // Start Game
+    Rectangle startButton = draw_button("START",0);
+    if (is_button_clicked(startButton)) {
+        g_game_state = PLAYING;
+    }
+
+    // Theme Toggle
+    Rectangle themeButton;
+    if (g_is_dark_theme) {
+        themeButton = draw_button("LIGHT MODE",1);
+    } else {
+        themeButton = draw_button("DARK MODE",1);
+    }
+    if (is_button_clicked(themeButton)) {
+        toggle_dark_theme();
+    }
+}
+
+// draws the pause menu when game is paused
+void draw_pause() {
+    ClearBackground(RED);
+
+    // window title
+    draw_window_title("GAME PAUSED");
+
+    // Continue button
+    Rectangle continueButton = draw_button("PLAY",0);
+    if (is_button_clicked(continueButton)) {
+        g_game_state = PLAYING;
+    }
+
+    // Theme Toggle
+    Rectangle themeButton;
+    if (g_is_dark_theme) {
+        themeButton = draw_button("LIGHT MODE",1);
+    } else {
+        themeButton = draw_button("DARK MODE",1);
+    }
+    if (is_button_clicked(themeButton)) {
+        toggle_dark_theme();
+    }
+}
+
+// Draws the death screen when snake is dead
+void draw_death() {
+
+    ClearBackground(g_background_color);
+    
+    drawgrid();
+    draw_snake();
+    draw_score();
+    drawWindowBorder();
+
+    // End game banner
+    int bannerPadding = GetScreenHeight()/7;
+
+    DrawRectangle(bannerPadding,bannerPadding,g_screen_width-2*bannerPadding,g_screen_height-2*bannerPadding,Fade(RED,0.85));
+
+    // SCORE display
+    char buffer[10];
+    char* score = &buffer[0];
+    sprintf(buffer, "SCORE: %d", g_score);
+    
+    draw_window_title(score);
+
+    // back button
+    Rectangle backButton = draw_button("BACK TO MENU",0);
+    if (is_button_clicked(backButton)) {
+        g_game_state = MENU;
+    }
+}
+
+// ==================================================
 
 int main(void)
 {
@@ -318,6 +432,14 @@ void update_draw_frame(void)
         // recompute global vargs
         g_grid_size = MIN(g_screen_width/g_horizontal_grid_count,g_screen_height/g_vertical_grid_count);
         g_margin_size = ((double)g_grid_size)*g_margin_ratio;
+        
+        int leftPadding = GetScreenWidth()-(g_grid_size*g_horizontal_grid_count);
+        int topPadding = GetScreenHeight()-(g_grid_size*g_vertical_grid_count);
+
+        g_screen_padding.x = leftPadding/2;
+        g_screen_padding.y = topPadding/2;
+        g_screen_padding.width = GetScreenWidth()-leftPadding;
+        g_screen_padding.height = GetScreenHeight()-topPadding;
     }
     BeginDrawing();
     
@@ -361,8 +483,16 @@ void draw_playing() {
     } else {
         
         move_snake();
-        check_food_eaten();
-        check_body_eaten();
+        if (check_food_eaten()) {
+            // Food eaten
+            place_new_food();
+            SNAKE->increase_length = true;
+            computeScore(SNAKE->size);
+        }
+        if (is_snake_dead()) {
+            g_game_over = true;
+            g_game_state = DEATH;
+        }
     }
 
     draw_snake();
@@ -378,116 +508,12 @@ void draw_playing() {
 
 // ====== HELPER FUNCTIONS ======
 
-// Free all malloced memory of snake
-void destroy_global_variables() {
-    if (SNAKE == NULL) return;
-
-    SnakeBody* prev = SNAKE->head;
-    SnakeBody* current = prev->next;
-    for (size_t i = 1; i < SNAKE->size; i++)
-    {
-        free(prev);
-        prev = current;
-        current = current->next;
-    }
-    free(current);
-}
-
-// Helper function to convert hue to RGB
-float hueToRgb(float p, float q, float t) {
-    if (t < 0) t += 1;
-    if (t > 1) t -= 1;
-    if (t < 1.0 / 6) return p + (q - p) * 6 * t;
-    if (t < 1.0 / 2) return q;
-    if (t < 2.0 / 3) return p + (q - p) * (2.0 / 3 - t) * 6;
-    return p;
-}
-
-// Function to convert HSL to RGB8
-Color hslToRgb8(float h, float s, float l) {
-    float r, g, b;
-
-    if (s == 0) {
-        r = g = b = l; // Achromatic
-    } else {
-        float q = l < 0.5 ? l * (1 + s) : l + s - l * s;
-        float p = 2 * l - q;
-        r = hueToRgb(p, q, h / 360 + 1.0 / 3);
-        g = hueToRgb(p, q, h / 360);
-        b = hueToRgb(p, q, h / 360 - 1.0 / 3);
-    }
-
-    Color rgb8;
-    rgb8.r = (unsigned char)(r * 255);
-    rgb8.g = (unsigned char)(g * 255);
-    rgb8.b = (unsigned char)(b * 255);
-    rgb8.a = 255;
-
-    return rgb8;
-}
-
-// sets g_game_over if snake has eaten itself 
-void check_body_eaten() {
-    if (SNAKE->size < 2) return;
-
-    SnakeBody* head = SNAKE->head;
-    SnakeBody* current = head->next;
-    for (size_t i = 1; i < SNAKE->size; i++)
-    {
-        if (head->posX == current->posX && head->posY == current->posY) {
-            g_game_over = true;
-            g_game_state = DEATH;
-            return;
-        }
-        current = current->next;
-    }
-}
-
-// Returns 1 if food is colliding
-int food_is_colliding_snake() {
-    SnakeBody* current = SNAKE->head;
-    for (size_t i = 0; i < SNAKE->size; i++)
-    {
-        if (current->posX == g_food.x && current->posY == g_food.y) {
-            return 1;
-        }
-        current = current->next;
-    }
-    return 0;
-}
-
-void computeScore(int size) {
-    int increase = 0;
-    if (size < 5) {
-        increase = 8;
-    } else if (size < 15) {
-        increase = 15;
-    } else {
-        increase = 25;
-    }
-    g_score += increase;
-}
-
-// Checks if the snake has eaten food
-void check_food_eaten() {
-    if (SNAKE->head->posX == g_food.x && SNAKE->head->posY == g_food.y) {
-        // Food eaten
-        move_food_randomly();
-        SNAKE->increase_length = true;
-        computeScore(SNAKE->size);
-    }
-}
-
-Color getColor(SnakeBody* bodyToPaint) {
-    return hslToRgb8(((double)bodyToPaint->index/30)*360,0.75,0.5);
-}
-
 // paints a standing body
 void print_body_standing(SnakeBody* bodyToPaint) {
     Vector2 topLeft =  {g_grid_size * (bodyToPaint->posX)+g_margin_size, g_grid_size * (bodyToPaint->posY)};
     Vector2 size =  {g_grid_size-2*g_margin_size, g_grid_size};
     
-    Color color = getColor(bodyToPaint);
+    Color color = get_color_for_index(bodyToPaint);
     DrawRectangleV(topLeft,size,color);
 }
 
@@ -495,13 +521,13 @@ void print_body_sleeping(SnakeBody* bodyToPaint) {
     Vector2 topLeft =  {g_grid_size * (bodyToPaint->posX), g_grid_size * (bodyToPaint->posY)+g_margin_size};
     Vector2 size =  {g_grid_size, g_grid_size-2*g_margin_size};
     
-    Color color = getColor(bodyToPaint);
+    Color color = get_color_for_index(bodyToPaint);
     DrawRectangleV(topLeft,size,color);
 }
 
 void print_body_up_right(SnakeBody* bodyToPaint) {
     
-    Color color = getColor(bodyToPaint);
+    Color color = get_color_for_index(bodyToPaint);
     
     // Main body
     Vector2 topLeft =  {g_grid_size * (bodyToPaint->posX)+g_margin_size, g_grid_size * (bodyToPaint->posY)};
@@ -516,7 +542,7 @@ void print_body_up_right(SnakeBody* bodyToPaint) {
 }
 
 void print_body_up_left(SnakeBody* bodyToPaint) {
-    Color color = getColor(bodyToPaint);
+    Color color = get_color_for_index(bodyToPaint);
     
     // Main body
     Vector2 topLeft =  {g_grid_size * (bodyToPaint->posX)+g_margin_size, g_grid_size * (bodyToPaint->posY)};
@@ -531,7 +557,7 @@ void print_body_up_left(SnakeBody* bodyToPaint) {
 }
 
 void print_body_down_left(SnakeBody* bodyToPaint) {
-    Color color = getColor(bodyToPaint);
+    Color color = get_color_for_index(bodyToPaint);
     
     // Main body
     Vector2 topLeft =  {g_grid_size * (bodyToPaint->posX)+g_margin_size, g_grid_size * (bodyToPaint->posY)+g_margin_size};
@@ -544,7 +570,7 @@ void print_body_down_left(SnakeBody* bodyToPaint) {
 }
 
 void print_body_down_right(SnakeBody* bodyToPaint) {
-    Color color = getColor(bodyToPaint);
+    Color color = get_color_for_index(bodyToPaint);
     
     // Main body
     Vector2 topLeft =  {g_grid_size * (bodyToPaint->posX)+g_margin_size, g_grid_size * (bodyToPaint->posY)+g_margin_size};
@@ -652,7 +678,7 @@ void paint_snake_tail_helper(SnakeBody* tail, SnakeBody* secondLast) {
         circleTopLeft.x += (centerSize/2);
         break;
     }
-    Color color = getColor(tail);
+    Color color = get_color_for_index(tail);
     DrawRectangleV(topLeft,size,color);
     DrawCircle(circleTopLeft.x,circleTopLeft.y,(g_grid_size-2*g_margin_size)/2,color);
 }
@@ -711,7 +737,14 @@ void initialize_global_variables() {
     g_vertical_grid_count = g_screen_height/g_grid_size;
     g_horizontal_grid_count = g_screen_width/g_grid_size;
     g_margin_size = ((double)g_grid_size)*g_margin_ratio;
+    int leftPadding = GetScreenWidth()-(g_grid_size*g_horizontal_grid_count);
+    int topPadding = GetScreenHeight()-(g_grid_size*g_vertical_grid_count);
 
+    g_screen_padding.x = leftPadding/2;
+    g_screen_padding.y = topPadding/2;
+    g_screen_padding.width = GetScreenWidth()-leftPadding;
+    g_screen_padding.height = GetScreenHeight()-topPadding;
+    g_score = 0;
     // SNAKE
 
     SnakeBody* head = malloc(sizeof(struct SnakeBody));
@@ -735,12 +768,9 @@ void initialize_global_variables() {
     SNAKE->head = head;
     SNAKE->tail = tail;
 
-    // Variables
-    g_score = 0;
-
     // Food
-    srand(time(NULL));
-    move_food_randomly();
+    SetRandomSeed(time(NULL));
+    place_new_food();
 }
 
 // Checks if user input is received
@@ -774,7 +804,7 @@ void handle_key_press() {
         SNAKE->increase_length = true;
     }
     if (IsKeyPressed(KEY_R)) {
-        move_food_randomly();
+        place_new_food();
     }
 }
 
@@ -782,15 +812,6 @@ void handle_key_press() {
 void draw_food() {
     Vector2 topLeft =  {g_grid_size * (g_food.x)+g_grid_size/2, g_grid_size * (g_food.y)+g_grid_size/2};
     DrawCircleV(topLeft,(g_grid_size/2)*0.7,RED);
-}
-
-// Places food at a random location on the map
-void move_food_randomly() {
-    g_food.x = rand() % g_horizontal_grid_count;
-    g_food.y = rand() % g_vertical_grid_count;
-    if (food_is_colliding_snake() == 1) {
-        move_food_randomly();
-    }
 }
 
 // changes  the direction of snake as given by enum 
@@ -934,11 +955,13 @@ void drawWindowBoxMarker() {
 
 // Makes Lines on viewport
 void drawWindowBorder() {
-    int right_padding = g_screen_width - (g_horizontal_grid_count*g_grid_size);
-    int bottom_padding = g_screen_height - (g_vertical_grid_count*g_grid_size);
+    // int right_padding = g_screen_width - (g_horizontal_grid_count*g_grid_size);
+    // int bottom_padding = g_screen_height - (g_vertical_grid_count*g_grid_size);
 
-    DrawLine(0,0,g_screen_width-right_padding,0,g_border_color); // TOP
-    DrawLine(0,g_screen_height-bottom_padding-1,g_screen_width-right_padding,g_screen_height-bottom_padding-1,g_border_color); // BOTTOM
-    DrawLine(1,0,1,g_screen_height-bottom_padding,g_border_color); // LEFT
-    DrawLine(g_screen_width-right_padding,0,g_screen_width-right_padding,g_screen_height-bottom_padding,g_border_color); // RIGHT
+    DrawRectangleLines(g_screen_padding.x,g_screen_padding.y,g_screen_padding.width,g_screen_padding.height,g_border_color);
+
+    // DrawLine(0,0,g_screen_width-right_padding,0,g_border_color); // TOP
+    // DrawLine(0,g_screen_height-bottom_padding-1,g_screen_width-right_padding,g_screen_height-bottom_padding-1,g_border_color); // BOTTOM
+    // DrawLine(1,0,1,g_screen_height-bottom_padding,g_border_color); // LEFT
+    // DrawLine(g_screen_width-right_padding,0,g_screen_width-right_padding,g_screen_height-bottom_padding,g_border_color); // RIGHT
 }
