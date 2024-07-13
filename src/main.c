@@ -30,10 +30,6 @@ enum SnakeDirection get_snake_relative_direction(SnakeBody*, SnakeBody*);
 void print_error_body(SnakeBody*);
 void draw_score();
 void draw_playing();
-void draw_menu();
-void draw_death();
-void draw_pause();
-void draw_pause_button();
 void drawgrid();
 void toggle_theme();
 
@@ -139,7 +135,7 @@ void draw_menu() {
     ClearBackground(RED);
 
     // Menu title
-    draw_window_title("SNAKE GAME");
+    draw_window_title("CLASSIC SNAKE");
 
     // Start Game
     Rectangle startButton = draw_button("START",0);
@@ -157,6 +153,111 @@ void draw_menu() {
     if (is_button_clicked(themeButton)) {
         toggle_theme();
     }
+}
+
+// draws the pause menu when game is paused
+void draw_pause() {
+    ClearBackground(RED);
+
+    // window title
+    draw_window_title("GAME PAUSED");
+
+    // Continue button
+    Rectangle continueButton = draw_button("PLAY",0);
+    if (is_button_clicked(continueButton)) {
+        g_game_state = PLAYING;
+    }
+
+    // Theme Toggle
+    Rectangle themeButton;
+    if (g_is_dark_theme) {
+        themeButton = draw_button("LIGHT MODE",1);
+    } else {
+        themeButton = draw_button("DARK MODE",1);
+    }
+    if (is_button_clicked(themeButton)) {
+        toggle_theme();
+    }
+}
+
+// Draws the death screen when snake is dead
+void draw_death() {
+
+    ClearBackground(g_background_color);
+    
+    drawgrid();
+    draw_snake();
+    draw_score();
+    drawWindowBorder();
+
+    // End game banner
+    int bannerPadding = GetScreenHeight()/7;
+
+    DrawRectangle(bannerPadding,bannerPadding,g_screen_width-2*bannerPadding,g_screen_height-2*bannerPadding,Fade(RED,0.85));
+
+    // SCORE display
+    char buffer[10];
+    char* score = &buffer[0];
+    sprintf(buffer, "SCORE: %d", g_score);
+    
+    draw_window_title(score);
+
+    // back button
+    Rectangle backButton = draw_button("BACK TO MENU",0);
+    if (is_button_clicked(backButton)) {
+        g_game_state = MENU;
+    }
+}
+
+// draws the pause button when game is being played
+void draw_pause_button() {
+
+    char titleText[6] = "Pause";
+
+    Rectangle pauseText;
+    pauseText.y = 0 + g_margin_size;
+    pauseText.height = g_screen_height/16;
+    pauseText.width = MeasureText((char *)&titleText,pauseText.height);
+    int screen_with_padding = g_grid_size*g_horizontal_grid_count-g_margin_size;
+    pauseText.x = (screen_with_padding-MeasureText((char *)&titleText,pauseText.height));
+
+    DrawText((char *)&titleText,pauseText.x,pauseText.y,pauseText.height,g_pause_color);
+    if (is_button_clicked(pauseText)) {
+        g_game_state = PAUSE;
+    }
+}
+
+// Handles web input
+void handle_input() {
+    if (g_extern_touch_x == 0 && g_extern_touch_y == 0) return;
+
+    Vector2 point = {g_extern_touch_x,g_extern_touch_y};
+    Vector2 mid = {GetScreenWidth()/2,GetScreenHeight()/2};
+    Vector2 topLeft = {0,0};
+    Vector2 topRight = {GetScreenWidth(),0};
+    Vector2 bottomRight = {GetScreenWidth(),GetScreenHeight()};
+    Vector2 bottomLeft = {0,GetScreenHeight()};
+
+    if (CheckCollisionPointTriangle(point,topLeft,mid,topRight)) {
+        change_snake_direction(UP);
+    } else if (CheckCollisionPointTriangle(point,topRight,mid,bottomRight)) {
+        change_snake_direction(RIGHT);
+    } else if (CheckCollisionPointTriangle(point,bottomRight,mid,bottomLeft)) {
+        change_snake_direction(DOWN);
+    } else if (CheckCollisionPointTriangle(point,bottomLeft,mid,topLeft)) {
+        change_snake_direction(LEFT);
+    }
+    g_extern_touch_x = 0;
+    g_extern_touch_y = 0;
+}
+
+// Draws the score when game is being played
+void draw_score() {
+    char buffer[10];
+    char* ptr_score = &buffer[0];
+
+    sprintf(buffer, "%d", g_score);
+    DrawText(ptr_score,g_margin_size,g_margin_size,g_grid_size-g_margin_size,g_score_color);
 }
 // ==================================================
 
@@ -181,13 +282,9 @@ void toggle_theme() {
 
 int main(void)
 {
-#if defined(PLATFORM_WEB)
     SetGesturesEnabled(GESTURE_NONE);
-#else
-    SetGesturesEnabled(GESTURE_SWIPE_UP | GESTURE_SWIPE_DOWN | GESTURE_SWIPE_RIGHT | GESTURE_SWIPE_LEFT | GESTURE_TAP);
-#endif
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
-    InitWindow(g_screen_width, g_screen_height, "Simple Snake Game");
+    InitWindow(g_screen_width, g_screen_height, "Classic Snake Game");
     initialize_global_variables();
 
 #if defined(PLATFORM_WEB)
@@ -245,266 +342,6 @@ void update_draw_frame(void)
     g_extern_touch_y = 0;
 }
 
-// draws the pause menu GameState = PAUSE
-void draw_pause() {
-    ClearBackground(RED);
-
-    // GAME TITLE
-        char titleText[12] = "Game Paused";
-        
-        int titleY = g_screen_height/6;
-        int titleFontSize = g_screen_height/6;
-        int titleX = (g_screen_width-MeasureText((char *)&titleText,titleFontSize))/2;
-
-        DrawText((char *)&titleText,titleX,titleY,titleFontSize,g_background_color);
-
-    // Continue BUTTON
-        char startText[5] = "play";
-        
-        int startY = g_screen_height/2;
-        int startFontHeight = g_screen_height/12;
-        int startFontWidth = MeasureText((char *)&startText,startFontHeight);
-        int startX = (g_screen_width-startFontWidth)/2;
-
-        int startButtonSidePadding = 40;
-        int startButtonUpDownPadding = 10;
-
-        int startButtonX = startX - startButtonSidePadding;
-        int startButtonY = startY-startButtonUpDownPadding;
-        int startButtonWidth = startFontWidth+2*startButtonSidePadding;
-        int startButtonHeight = startFontHeight+2*startButtonUpDownPadding;
-
-        DrawRectangle(startButtonX,startButtonY,startButtonWidth,startButtonHeight,g_background_color);
-        DrawText((char *)&startText,startX,startY,startFontHeight,RED);
-    
-    // CHECK START CLICKED
-#if defined(PLATFORM_WEB)
-        if (g_extern_touch_x != 0 && g_extern_touch_y != 0) {
-            bool cond_1 = startButtonX <= g_extern_touch_x;
-            bool cond_2 = g_extern_touch_x <= startButtonX+startButtonWidth;
-            bool cond_3 = startButtonY <= g_extern_touch_y;
-            bool cond_4 = g_extern_touch_y <= startButtonY+startButtonHeight;
-            if (cond_1 && cond_2 && cond_3 && cond_4) {
-                g_game_state = PLAYING;
-                g_extern_touch_x = 0;
-                g_extern_touch_y = 0;
-            }
-        };
-#else
-        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-            bool cond_1 = startButtonX <= GetMouseX();
-            bool cond_2 = GetMouseX() <= startButtonX+startButtonWidth;
-            bool cond_3 = startButtonY <= GetMouseY();
-            bool cond_4 = GetMouseY() <= startButtonY+startButtonHeight;
-            if (cond_1 && cond_2 && cond_3 && cond_4) {
-                g_game_state = PLAYING;
-            }
-        } else if (IsGestureDetected(GESTURE_TAP)) {
-            bool cond_1 = startButtonX <= GetTouchX();
-            bool cond_2 = GetTouchX() <= startButtonX+startButtonWidth;
-            bool cond_3 = startButtonY <= GetTouchY();
-            bool cond_4 = GetTouchY() <= startButtonY+startButtonHeight;
-            if (cond_1 && cond_2 && cond_3 && cond_4) {
-                g_game_state = PLAYING;
-            }
-        }
-#endif
-
-    // Theme BUTTON
-        char themeTextDark[10] = "DARK MODE";
-        char themeTextLight[11] = "LIGHT MODE";
-        
-        int themeY = g_screen_height/2 + startButtonHeight + 10;
-        int themeFontHeight = g_screen_height/12;
-        int themeFontWidth = MeasureText((char *)&themeTextLight,themeFontHeight);
-        int themeX = (g_screen_width-themeFontWidth)/2;
-
-        int themeButtonSidePadding = 40;
-        int themeButtonUpDownPadding = 10;
-
-        int themeButtonX = themeX - themeButtonSidePadding;
-        int themeButtonY = themeY-themeButtonUpDownPadding;
-        int themeButtonWidth = themeFontWidth+2*themeButtonSidePadding;
-        int themeButtonHeight = themeFontHeight+2*themeButtonUpDownPadding;
-
-        DrawRectangle(themeButtonX,themeButtonY,themeButtonWidth,themeButtonHeight,g_background_color);
-        if (g_is_dark_theme) {
-            DrawText((char *)&themeTextLight,themeX,themeY,themeFontHeight,RED);
-        } else {
-            DrawText((char *)&themeTextDark,themeX+15,themeY,themeFontHeight,RED);
-        }
-
-    // CHECK theme toggled
-#if defined(PLATFORM_WEB)
-        if (g_extern_touch_x != 0 && g_extern_touch_y != 0) {
-            bool cond_1 = themeButtonX <= g_extern_touch_x;
-            bool cond_2 = g_extern_touch_x <= themeButtonX+themeButtonWidth;
-            bool cond_3 = themeButtonY <= g_extern_touch_y;
-            bool cond_4 = g_extern_touch_y <= themeButtonY+themeButtonHeight;
-            if (cond_1 && cond_2 && cond_3 && cond_4) {
-                toggle_theme();
-                g_extern_touch_x = 0;
-                g_extern_touch_y = 0;
-            }
-        }
-#else
-        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-            bool cond_1 = themeButtonX <= GetMouseX();
-            bool cond_2 = GetMouseX() <= themeButtonX+themeButtonWidth;
-            bool cond_3 = themeButtonY <= GetMouseY();
-            bool cond_4 = GetMouseY() <= themeButtonY+themeButtonHeight;
-            if (cond_1 && cond_2 && cond_3 && cond_4) {
-                toggle_theme();
-            }
-        } else if (IsGestureDetected(GESTURE_TAP)) {
-            bool cond_1 = themeButtonX <= GetTouchX();
-            bool cond_2 = GetTouchX() <= themeButtonX+themeButtonWidth;
-            bool cond_3 = themeButtonY <= GetTouchY();
-            bool cond_4 = GetTouchY() <= themeButtonY+themeButtonHeight;
-            if (cond_1 && cond_2 && cond_3 && cond_4) {
-                toggle_theme();
-            }
-        }
-#endif
-}
-
-// Does the painting for GameState = DEATH
-void draw_death() {
-
-    ClearBackground(g_background_color);
-    
-    drawgrid();
-    draw_snake();
-    draw_score();
-    drawWindowBorder();
-
-    // End game banner
-        int bannerPadding = 150;
-
-        DrawRectangle(bannerPadding,bannerPadding,g_screen_width-2*bannerPadding,g_screen_height-2*bannerPadding,RED);
-
-    // SCORE display
-        char buffer[10];
-        const char* score = &buffer[0];
-        sprintf(buffer, "Score: %d", g_score);
-        
-        int scoreY = bannerPadding+20;
-        int scoreFontSize = g_screen_height/8;
-        int scoreX = (g_screen_width-MeasureText(score,scoreFontSize))/2;
-
-        DrawText(score,scoreX,scoreY,scoreFontSize,g_background_color);
-
-    // back button
-        char startText[13] = "back to Menu";
-        
-        int startFontHeight = g_screen_height/12;
-        int startY = g_screen_height-bannerPadding-20-startFontHeight;
-        int startFontWidth = MeasureText((char *)&startText,startFontHeight);
-        int startX = (g_screen_width-startFontWidth)/2;
-
-        int startButtonSidePadding = 40;
-        int startButtonUpDownPadding = 10;
-
-        int startButtonX = startX - startButtonSidePadding;
-        int startButtonY = startY-startButtonUpDownPadding;
-        int startButtonWidth = startFontWidth+2*startButtonSidePadding;
-        int startButtonHeight = startFontHeight+2*startButtonUpDownPadding;
-
-        DrawRectangle(startButtonX,startButtonY,startButtonWidth,startButtonHeight,g_background_color);
-        DrawText((char *)&startText,startX,startY,startFontHeight,RED);
-    
-    // CHECK START CLICKED
-#if defined(PLATFORM_WEB)
-        if (g_extern_touch_x != 0 && g_extern_touch_y != 0) {
-            bool cond_1 = startButtonX <= g_extern_touch_x;
-            bool cond_2 = g_extern_touch_x <= startButtonX+startButtonWidth;
-            bool cond_3 = startButtonY <= g_extern_touch_y;
-            bool cond_4 = g_extern_touch_y <= startButtonY+startButtonHeight;
-            if (cond_1 && cond_2 && cond_3 && cond_4) {
-                g_game_state = MENU;
-            g_extern_touch_x = 0;
-            g_extern_touch_y = 0;
-            }
-        }
-#else
-        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-            bool cond_1 = startButtonX <= GetMouseX();
-            bool cond_2 = GetMouseX() <= startButtonX+startButtonWidth;
-            bool cond_3 = startButtonY <= GetMouseY();
-            bool cond_4 = GetMouseY() <= startButtonY+startButtonHeight;
-            if (cond_1 && cond_2 && cond_3 && cond_4) {
-                g_game_state = MENU;
-            }
-        } else if (IsGestureDetected(GESTURE_TAP)) {
-            bool cond_1 = startButtonX <= GetTouchX();
-            bool cond_2 = GetTouchX() <= startButtonX+startButtonWidth;
-            bool cond_3 = startButtonY <= GetTouchY();
-            bool cond_4 = GetTouchY() <= startButtonY+startButtonHeight;
-            if (cond_1 && cond_2 && cond_3 && cond_4) {
-                g_game_state = MENU;
-            }
-        }
-#endif
-}
-
-// Handles web input
-void handle_input() {
-    if (g_extern_touch_x == 0 && g_extern_touch_y == 0) return;
-
-    int x = g_extern_touch_x;
-    int y = g_extern_touch_y;
-
-    int mid_x = g_screen_width/2;
-    int mid_y = g_screen_height/2;
-    double gradient = (double)mid_y/(double)mid_x;
-    double inv_gradient = (double)mid_x/(double)mid_y;
-    
-    if (x < mid_x && y < mid_y) {
-        // TOP LEFT
-        int expected_y = gradient*(double)x;
-        if (expected_y > y) {
-            // UPPER AREA
-            change_snake_direction(UP);
-        } else {
-            // LOWER AREA
-            change_snake_direction(LEFT);
-        }
-    } else if (x > mid_x && y < mid_y) {
-        // TOP RIGHT
-        int expected_x = inv_gradient*(double)(g_screen_height-y);
-        if (expected_x > x) {
-            // UPPER AREA
-            change_snake_direction(UP);
-        } else {
-            // LOWER AREA
-            change_snake_direction(RIGHT);
-        }
-
-    } else if (x > mid_x && y > mid_y) {
-        // BOTTOM RIGHT
-        int expected_y = gradient*(double)x;
-        if (expected_y > y) {
-            // UPPER AREA
-            change_snake_direction(RIGHT);
-        } else {
-            // LOWER AREA
-            change_snake_direction(DOWN);
-        }
-    } else {
-        // BOTTOM LEFT
-        int expected_x = inv_gradient*(double)(g_screen_height-y);
-        if (expected_x > x) {
-            // UPPER AREA
-            change_snake_direction(LEFT);
-        } else {
-            // LOWER AREA
-            change_snake_direction(DOWN);
-        }
-    }
-    g_extern_touch_x = 0;
-    g_extern_touch_y = 0;
-}
-
 // Does the painting for GameState = PLAYING
 void draw_playing() {
     if (g_game_over) {
@@ -536,51 +373,6 @@ void draw_playing() {
         handle_input();
 #else
         handle_key_press();
-#endif
-}
-
-// draws the pause button when game is being played
-void draw_pause_button() {
-
-    char titleText[6] = "Pause";
-
-    int titleY = 0 + g_margin_size;
-    int pause_button_height = g_screen_height/16;
-    int pause_button_width = MeasureText((char *)&titleText,pause_button_height);
-    int screen_with_padding = g_grid_size*g_horizontal_grid_count-g_margin_size;
-    int titleX = (screen_with_padding-MeasureText((char *)&titleText,pause_button_height));
-
-    DrawText((char *)&titleText,titleX,titleY,pause_button_height,g_pause_color);
-#if defined(PLATFORM_WEB)
-    if (g_extern_touch_x != 0 && g_extern_touch_y != 0) {
-        bool cond_1 = titleX < g_extern_touch_x;
-        bool cond_2 = g_extern_touch_x < titleX+pause_button_width;
-        bool cond_3 = titleY < g_extern_touch_y;
-        bool cond_4 = g_extern_touch_y < pause_button_height+titleY;
-        if (cond_1 && cond_2 && cond_3 && cond_4) {
-            g_game_state = PAUSE;
-            g_extern_touch_x = 0;
-            g_extern_touch_y = 0;
-        }
-    }
-#else
-    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-        bool cond_1 = titleX < GetMouseX();
-        bool cond_2 = GetMouseX() < titleX+pause_button_width;
-        bool cond_3 = titleY < GetMouseY();
-        bool cond_4 = GetMouseY() < pause_button_height+titleY;
-        if (cond_1 && cond_2 && cond_3 && cond_4) {
-            g_game_state = PAUSE;
-        }
-    } else if (IsGestureDetected(GESTURE_TAP)) {
-        bool cond_1 = titleX < GetTouchX();
-        bool cond_2 = GetTouchX() < titleX+pause_button_width;
-        bool cond_3 = titleY < GetTouchY();
-        bool cond_4 = GetTouchY() < pause_button_height+titleY;
-        if (cond_1 && cond_2 && cond_3 && cond_4) {
-            g_game_state = PAUSE;
-        }
-    }
 #endif
 }
 
@@ -632,14 +424,6 @@ Color hslToRgb8(float h, float s, float l) {
     rgb8.a = 255;
 
     return rgb8;
-}
-
-void draw_score() {
-    char buffer[10];
-    const char* str_pointer = &buffer[0];
-
-    sprintf(buffer, "%d", g_score);
-    DrawText(str_pointer,g_margin_size,g_margin_size,g_grid_size-g_margin_size,g_score_color);
 }
 
 // sets g_game_over if snake has eaten itself 
