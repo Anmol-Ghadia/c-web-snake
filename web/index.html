@@ -34,6 +34,7 @@
         initialized = true;
         give_touch_input = Module.cwrap('give_touch_input', null, ['number','number']);
         give_key_input = Module.cwrap('give_key_input', null, ['number']);
+        pause_playing_game = Module.cwrap('pause_playing_game', null, []);
     }),
     print: (function() {
         return (...args) => {

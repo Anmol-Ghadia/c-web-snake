@@ -11,6 +11,8 @@
 
 void change_snake_direction(enum SnakeDirection);
 
+
+#if defined(PLATFORM_WEB)
 // sets the touch input
 // used by external api
 void give_touch_input(int x, int y) {
@@ -42,13 +44,25 @@ void give_key_input(unsigned int dir) {
     }
 }
 
-// ==================================================
+// Pauses the game if playing,
+// unpauses if already paused.
+void pause_playing_game() {
+    if (g_game_state == PLAYING) {
+        g_game_state = PAUSE;
+    } else if (g_game_state == PAUSE) {
+        g_game_state = PLAYING;
+    }
+}
+#endif
 // ====== HELPERS ========
 
+#if defined(PLATFORM_WEB)
+// Resets the touch input by PLATFORM_WEB
 void resetInput() {
     g_extern_touch.x = EXTERN_TOUCH_NONE;
     g_extern_touch.y = EXTERN_TOUCH_NONE;
 }
+#endif
 
 // Draws the grid for snake game
 void drawgrid() {
@@ -280,6 +294,7 @@ void draw_pause_button() {
     }
 }
 
+#if defined(PLATFORM_WEB)
 // Handles web input
 void handle_web_input() {
     if (g_extern_touch.x == EXTERN_TOUCH_NONE && g_extern_touch.y == EXTERN_TOUCH_NONE) return;
@@ -301,6 +316,7 @@ void handle_web_input() {
     }
     resetInput();
 }
+#endif
 
 // Draws the score when game is being played
 void draw_score() {
@@ -920,7 +936,9 @@ void update_draw_frame(void)
     }
 
     EndDrawing();
+#if defined(PLATFORM_WEB)
     resetInput();
+#endif
 }
 
 int main(void)

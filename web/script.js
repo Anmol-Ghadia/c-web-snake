@@ -5,6 +5,7 @@ document.addEventListener('pointerdown',function(event) {
 })
 
 document.addEventListener('keydown',function(event) {
+    console.log(event.key);
     switch (event.key) {
         case "w":
         case "ArrowUp":
@@ -21,6 +22,9 @@ document.addEventListener('keydown',function(event) {
         case "a":
         case "ArrowLeft":
             give_key_input(3);
+            break;
+        case "Escape":
+            pause_playing_game();
             break;
         default:
             break;
