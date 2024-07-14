@@ -9,16 +9,7 @@
 #endif
 #include "main.h"
 
-// Function defs
-void update_draw_frame(void);
-void initialize_global_variables();
-void draw_snake();
 void change_snake_direction(enum SnakeDirection);
-void destroy_global_variables();
-void place_new_food();
-void draw_food();
-enum SnakeDirection get_snake_relative_direction(SnakeBody*, SnakeBody*);
-void draw_playing();
 
 // sets the touch input
 // used by external api
@@ -53,6 +44,11 @@ void give_key_input(unsigned int dir) {
 
 // ==================================================
 // ====== HELPERS ========
+
+void resetInput() {
+    g_extern_touch_x = 0;
+    g_extern_touch_y = 0;
+}
 
 // Draws the grid for snake game
 void drawgrid() {
@@ -254,8 +250,7 @@ bool is_button_clicked(Rectangle button) {
     if (g_extern_touch_x != 0 && g_extern_touch_y != 0) {
         Vector2 point = {g_extern_touch_x,g_extern_touch_y};
         if (CheckCollisionPointRec(point,button)) {
-            g_extern_touch_x = 0;
-            g_extern_touch_y = 0;
+            resetInput();
             return true;
         }
     }
@@ -287,7 +282,7 @@ void draw_pause_button() {
 }
 
 // Handles web input
-void handle_input() {
+void handle_web_input() {
     if (g_extern_touch_x == 0 && g_extern_touch_y == 0) return;
 
     Vector2 point = {g_extern_touch_x,g_extern_touch_y};
@@ -306,8 +301,7 @@ void handle_input() {
     } else if (CheckCollisionPointTriangle(point,bottomLeft,mid,topLeft)) {
         change_snake_direction(LEFT);
     }
-    g_extern_touch_x = 0;
-    g_extern_touch_y = 0;
+    resetInput();
 }
 
 // Draws the score when game is being played
@@ -321,21 +315,6 @@ void draw_score() {
     int textSize = g_grid_size-g_margin_size;
 
     DrawText(ptr_score,textX,textY,textSize,g_score_color);
-}
-
-// Free all malloced memory of snake
-void destroy_global_variables() {
-    if (SNAKE == NULL) return;
-
-    SnakeBody* prev = SNAKE->head;
-    SnakeBody* current = prev->next;
-    for (size_t i = 1; i < SNAKE->size; i++)
-    {
-        free(prev);
-        prev = current;
-        current = current->next;
-    }
-    free(current);
 }
 
 // Draws snake body when it is in NORTH-SOUTH direction
@@ -414,10 +393,40 @@ void draw_body_error(SnakeBody* bodyToPaint) {
     DrawRectangleV(topLeft,size,GRAY);
 }
 
+
+// REQUIRES, first and second are at right angles
+// gives the direction of first relative to second
+enum SnakeDirection get_relative_snake_direction(SnakeBody* first, SnakeBody* second) {
+
+    if (first->posX < second->posX) {
+        if ((second->posX - first->posX) > 1) {
+            return RIGHT; // due to world wrap
+        }
+        return LEFT;
+    }
+    if (second->posX < first->posX) {
+        if ((first->posX - second->posX) > 1) {
+            return LEFT; // due to world wrap
+        }
+        return RIGHT;
+    }
+    if (second->posY < first->posY) {
+        if ((first->posY - second->posY) > 1) {
+            return UP; // due to world wrap
+        }
+        return DOWN;
+    }
+
+    if ((second->posY-first->posY)>1) {
+        return DOWN;  // due to world wrap
+    }
+    return UP;
+}
+
 // decides and draws the snake body in appropriate direction 
 void paint_snake_body_helper(SnakeBody* last, SnakeBody* bodyToPaint,SnakeBody* next) {
-    enum SnakeDirection dir_1 = get_snake_relative_direction(bodyToPaint,last);
-    enum SnakeDirection dir_2 = get_snake_relative_direction(bodyToPaint,next);
+    enum SnakeDirection dir_1 = get_relative_snake_direction(bodyToPaint,last);
+    enum SnakeDirection dir_2 = get_relative_snake_direction(bodyToPaint,next);
 
     // Error case
     if (dir_1 == dir_2) draw_body_error(bodyToPaint);
@@ -619,7 +628,7 @@ void paint_snake_head(SnakeBody* head, SnakeBody* next) {
         0
     };
     float rotation;
-    switch (get_snake_relative_direction(head,next))
+    switch (get_relative_snake_direction(head,next))
     {
     case UP:
         rotation = 0;
@@ -666,7 +675,7 @@ void paint_snake_tail(SnakeBody* tail, SnakeBody* before) {
         0
     };
     float rotation;
-    switch (get_snake_relative_direction(tail,before))
+    switch (get_relative_snake_direction(tail,before))
     {
     case UP:
         rotation = 0;
@@ -702,6 +711,75 @@ void draw_snake() {
     }
 }
 
+// Free all malloced memory of snake
+void delete_snake() {
+    if (SNAKE == NULL) return;
+
+    SnakeBody* prev = SNAKE->head;
+    SnakeBody* current = prev->next;
+    for (size_t i = 1; i < SNAKE->size; i++)
+    {
+        free(prev);
+        prev = current;
+        current = current->next;
+    }
+    free(current);
+}
+
+
+// REQURIRES: SNAKE is NULL
+// constructs a new snake with size 2
+void init_snake() {
+    SnakeBody* head = malloc(sizeof(struct SnakeBody));
+    head->posX = g_horizontal_grid_count/2;
+    head->posY = g_vertical_grid_count/2;
+    head->index = 0;
+    
+    SnakeBody* tail = malloc(sizeof(struct SnakeBody));
+    tail->posX = head->posX+1;
+    tail->posY = head->posY+1;
+    tail->index = 1;
+    tail->next = NULL;
+
+    head->next = tail;
+    
+    SNAKE = malloc(sizeof(struct Snake));
+    SNAKE->size = 2;
+    SNAKE->direction = DOWN;
+    SNAKE->increase_length = false;
+    SNAKE->direction_changed = false;
+    SNAKE->head = head;
+    SNAKE->tail = tail;
+}
+
+// TODO !!!
+// initializes the global variables to start a new game
+void init_playing_state() {
+    init_snake();
+    place_new_food();
+}
+
+// TODO !!!
+// Initializes global vars
+void init_global_variables() {
+    
+    // Vars
+    g_vertical_grid_count = g_screen_height/g_grid_size;
+    g_horizontal_grid_count = g_screen_width/g_grid_size;
+    g_margin_size = ((double)g_grid_size)*g_margin_ratio;
+    int leftPadding = GetScreenWidth()-(g_grid_size*g_horizontal_grid_count);
+    int topPadding = GetScreenHeight()-(g_grid_size*g_vertical_grid_count);
+
+    g_screen_padding.x = leftPadding/2;
+    g_screen_padding.y = topPadding/2;
+    g_screen_padding.width = GetScreenWidth()-leftPadding;
+    g_screen_padding.height = GetScreenHeight()-topPadding;
+    g_score = 0;
+
+    // Food
+    SetRandomSeed(time(NULL));
+}
+
 // ===== Main functions =========
 
 // Draws the menu on screen and checks if button is pressed
@@ -714,6 +792,7 @@ void draw_menu() {
     // Start Game
     Rectangle startButton = draw_button("START",0);
     if (is_button_clicked(startButton)) {
+        init_playing_state();
         g_game_state = PLAYING;
     }
 
@@ -759,10 +838,9 @@ void draw_death() {
 
     ClearBackground(g_background_color);
     
+    drawWindowBorder();
     drawgrid();
     draw_snake();
-    draw_score();
-    drawWindowBorder();
 
     // End game banner
     int bannerPadding = GetScreenHeight()/7;
@@ -782,38 +860,39 @@ void draw_death() {
     // back button
     Rectangle backButton = draw_button("BACK TO MENU",0);
     if (is_button_clicked(backButton)) {
+        delete_snake();
         g_game_state = MENU;
     }
 }
 
-// ==================================================
+// Does the drawing when game is played 
+void draw_playing() {
+    ClearBackground(g_background_color);
 
-int main(void)
-{
-    SetGesturesEnabled(GESTURE_NONE);
-    SetConfigFlags(FLAG_WINDOW_RESIZABLE);
-    InitWindow(g_screen_width, g_screen_height, "Classic Snake Game");
-    initialize_global_variables();
+    drawWindowBorder();
+    drawgrid();
 
-#if defined(PLATFORM_WEB)
-    TraceLog(LOG_INFO,"WEB MODE");
-    emscripten_set_main_loop(update_draw_frame, 0, 1);
-#else
-    SetTargetFPS(240);
-    TraceLog(LOG_INFO,"DESKTOP MODE");
-
-    while (!WindowShouldClose())
-    {
-        update_draw_frame();
+    move_snake_if_possible();
+    if (check_food_eaten()) {
+        // Food eaten
+        place_new_food();
+        SNAKE->increase_length = true;
+        computeScore(SNAKE->size);
     }
+    if (is_snake_dead()) {
+        g_game_state = DEATH;
+    }
+
+    draw_snake();
+    draw_food();
+    draw_score();
+    draw_pause_button();
+#if defined(PLATFORM_WEB)
+    handle_web_input();
+#else
+    handle_desktop_input();
 #endif
-
-    CloseWindow();
-    destroy_global_variables();
-
-    return 0;
 }
-
 
 // Game Loop function
 void update_draw_frame(void)
@@ -854,115 +933,31 @@ void update_draw_frame(void)
     }
 
     EndDrawing();
-    g_extern_touch_x = 0;
-    g_extern_touch_y = 0;
+    resetInput();
 }
 
-// Does the painting for GameState = PLAYING
-void draw_playing() {
-    if (g_game_over) {
-        g_game_over = false;
-        initialize_global_variables();
-    }
+int main(void)
+{
+    SetGesturesEnabled(GESTURE_NONE);
+    SetConfigFlags(FLAG_WINDOW_RESIZABLE);
+    InitWindow(g_screen_width, g_screen_height, "Classic Snake Game");
+    init_global_variables();
 
-    ClearBackground(g_background_color);
-
-    drawWindowBorder();
-    drawgrid();
-
-    move_snake_if_possible();
-    if (check_food_eaten()) {
-        // Food eaten
-        place_new_food();
-        SNAKE->increase_length = true;
-        computeScore(SNAKE->size);
-    }
-    if (is_snake_dead()) {
-        g_game_over = true;
-        g_game_state = DEATH;
-    }
-
-    draw_snake();
-    draw_food();
-    draw_score();
-    draw_pause_button();
 #if defined(PLATFORM_WEB)
-        handle_input();
+    TraceLog(LOG_INFO,"WEB MODE");
+    emscripten_set_main_loop(update_draw_frame, 0, 1);
 #else
-        handle_desktop_input();
+    SetTargetFPS(244);
+    TraceLog(LOG_INFO,"DESKTOP MODE");
+
+    while (!WindowShouldClose())
+    {
+        update_draw_frame();
+    }
 #endif
-}
 
-// ====== HELPER FUNCTIONS ======
+    delete_snake();
+    CloseWindow();
 
-// REQUIRES, first and second are at right angles
-// gives the direction of first relative to second
-enum SnakeDirection get_snake_relative_direction(SnakeBody* first, SnakeBody* second) {
-
-    if (first->posX < second->posX) {
-        if ((second->posX - first->posX) > 1) {
-            return RIGHT; // due to world wrap
-        }
-        return LEFT;
-    }
-    if (second->posX < first->posX) {
-        if ((first->posX - second->posX) > 1) {
-            return LEFT; // due to world wrap
-        }
-        return RIGHT;
-    }
-    if (second->posY < first->posY) {
-        if ((first->posY - second->posY) > 1) {
-            return UP; // due to world wrap
-        }
-        return DOWN;
-    }
-
-    if ((second->posY-first->posY)>1) {
-        return DOWN;  // due to world wrap
-    }
-    return UP;
-}
-
-// Initializes global vars
-void initialize_global_variables() {
-    
-    // Vars
-    g_vertical_grid_count = g_screen_height/g_grid_size;
-    g_horizontal_grid_count = g_screen_width/g_grid_size;
-    g_margin_size = ((double)g_grid_size)*g_margin_ratio;
-    int leftPadding = GetScreenWidth()-(g_grid_size*g_horizontal_grid_count);
-    int topPadding = GetScreenHeight()-(g_grid_size*g_vertical_grid_count);
-
-    g_screen_padding.x = leftPadding/2;
-    g_screen_padding.y = topPadding/2;
-    g_screen_padding.width = GetScreenWidth()-leftPadding;
-    g_screen_padding.height = GetScreenHeight()-topPadding;
-    g_score = 0;
-    // SNAKE
-
-    SnakeBody* head = malloc(sizeof(struct SnakeBody));
-    head->posX = g_horizontal_grid_count/2;
-    head->posY = g_vertical_grid_count/2;
-    head->index = 0;
-    
-    SnakeBody* tail = malloc(sizeof(struct SnakeBody));
-    tail->posX = head->posX+1;
-    tail->posY = head->posY+1;
-    tail->index = 1;
-    tail->next = NULL;
-
-    head->next = tail;
-    
-    SNAKE = malloc(sizeof(struct Snake));
-    SNAKE->size = 2;
-    SNAKE->direction = DOWN;
-    SNAKE->increase_length = false;
-    SNAKE->direction_changed = false;
-    SNAKE->head = head;
-    SNAKE->tail = tail;
-
-    // Food
-    SetRandomSeed(time(NULL));
-    place_new_food();
+    return 0;
 }
