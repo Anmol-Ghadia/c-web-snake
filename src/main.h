@@ -10,6 +10,7 @@
 // CONFIG GLOBALS
 const double g_snake_movement_time = 0.4;
 const double g_margin_ratio = 0.35;
+const double g_head_margin_ratio = 0.30;
 
 // GLOBALS
 int g_extern_touch_x = 0;
@@ -33,6 +34,7 @@ Color g_snake_head_color = RED;
 Color g_score_color = BLACK;
 Color g_pause_color = BLACK;
 Color g_border_color = BLACK;
+Color g_background_outisde_color = GRAY;
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 

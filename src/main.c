@@ -13,27 +13,12 @@
 void update_draw_frame(void);
 void initialize_global_variables();
 void draw_snake();
-void paint_snake_body_helper(SnakeBody*,SnakeBody*,SnakeBody*);
-void handle_key_press();
 void change_snake_direction(enum SnakeDirection);
-void move_snake();
-void update_snake();
-void get_updated_vector(enum SnakeDirection, Position, Position*);
 void destroy_global_variables();
-int round_world_coordinates(int, int);
 void place_new_food();
 void draw_food();
 enum SnakeDirection get_snake_relative_direction(SnakeBody*, SnakeBody*);
-void print_error_body(SnakeBody*);
-void draw_score();
 void draw_playing();
-void drawgrid();
-void toggle_dark_theme();
-
-// old helper function defs
-void drawWindowBoxMarker();
-void drawWindowBorder();
-
 
 // sets the touch input
 // used by external api
@@ -68,6 +53,36 @@ void give_key_input(unsigned int dir) {
 
 // ==================================================
 // ====== HELPERS ========
+
+// Draws the grid for snake game
+void drawgrid() {
+
+    for (size_t i = 1; i < g_horizontal_grid_count; i++)
+    {
+        Vector2 columnStart = {
+            g_grid_size * i + g_screen_padding.x,
+            g_screen_padding.y
+        };
+        Vector2 columnEnd = {
+            g_grid_size * i + g_screen_padding.x,
+            g_grid_size*g_vertical_grid_count + g_screen_padding.y
+        };
+        DrawLineV(columnStart,columnEnd,g_grid_color);
+    }
+
+    for (size_t i = 1; i < g_vertical_grid_count; i++)
+    {
+        Vector2 rowStart = {
+            g_screen_padding.x,
+            g_grid_size * i + g_screen_padding.y
+        };
+        Vector2 rowEnd = {
+            g_horizontal_grid_count*g_grid_size + g_screen_padding.x,
+            g_grid_size * i + g_screen_padding.y
+        };
+        DrawLineV(rowStart,rowEnd,g_grid_color);
+    }
+}
 
 // Toggles the dark theme 
 void toggle_dark_theme() {
@@ -185,6 +200,15 @@ bool check_food_eaten() {
     return (SNAKE->head->posX == g_food.x && SNAKE->head->posY == g_food.y);
 }
 
+// Draws the game border and paints outside region
+void drawWindowBorder() {
+    ClearBackground(g_background_outisde_color);
+    
+    DrawRectangle(g_screen_padding.x,g_screen_padding.y,g_screen_padding.width,g_screen_padding.height,g_background_color);
+    
+    DrawRectangleLines(g_screen_padding.x,g_screen_padding.y,g_screen_padding.width,g_screen_padding.height,g_border_color);
+}
+
 
 // Draws the title of a window
 // ex. Menu screen, pause screen
@@ -251,11 +275,10 @@ void draw_pause_button() {
     char titleText[6] = "Pause";
 
     Rectangle pauseText;
-    pauseText.y = 0 + g_margin_size;
+    pauseText.y = g_margin_size + g_screen_padding.y;
     pauseText.height = g_screen_height/16;
     pauseText.width = MeasureText((char *)&titleText,pauseText.height);
-    int screen_with_padding = g_grid_size*g_horizontal_grid_count-g_margin_size;
-    pauseText.x = (screen_with_padding-MeasureText((char *)&titleText,pauseText.height));
+    pauseText.x = (g_screen_padding.x+g_screen_padding.width-g_margin_size-pauseText.width);
 
     DrawText((char *)&titleText,pauseText.x,pauseText.y,pauseText.height,g_pause_color);
     if (is_button_clicked(pauseText)) {
@@ -293,7 +316,11 @@ void draw_score() {
     char* ptr_score = &buffer[0];
 
     sprintf(buffer, "%d", g_score);
-    DrawText(ptr_score,g_margin_size,g_margin_size,g_grid_size-g_margin_size,g_score_color);
+    int textX = g_margin_size+g_screen_padding.x;
+    int textY = g_margin_size+g_screen_padding.y;
+    int textSize = g_grid_size-g_margin_size;
+
+    DrawText(ptr_score,textX,textY,textSize,g_score_color);
 }
 
 // Free all malloced memory of snake
@@ -309,6 +336,370 @@ void destroy_global_variables() {
         current = current->next;
     }
     free(current);
+}
+
+// Draws snake body when it is in NORTH-SOUTH direction
+void draw_body_standing(SnakeBody* bodyToPaint) {
+    Vector2 size =  {
+        g_grid_size-2*g_margin_size,
+        g_grid_size
+    };
+    Vector2 topLeft =  {
+        g_screen_padding.x + g_grid_size * (bodyToPaint->posX)+g_margin_size,
+        g_screen_padding.y + g_grid_size * (bodyToPaint->posY)
+    };
+    
+    Color color = get_color_for_index(bodyToPaint);
+    DrawRectangleV(topLeft,size,color);
+}
+
+// Draws snake body when it is in EAST-WEST direction
+void draw_body_sleeping(SnakeBody* bodyToPaint) {
+    Vector2 size =  {
+        g_grid_size,
+        g_grid_size-2*g_margin_size
+    };
+    Vector2 topLeft =  {
+        g_screen_padding.x + g_grid_size * (bodyToPaint->posX),
+        g_screen_padding.y + g_grid_size * (bodyToPaint->posY)+g_margin_size
+    };
+    
+    Color color = get_color_for_index(bodyToPaint);
+    DrawRectangleV(topLeft,size,color);
+}
+
+// Draws a right angle piece of body with given rotation
+//  rotation = 0 is NORTH-EAST piece
+void draw_snake_right_angle(SnakeBody *bodyToPaint,float rotation) {
+    
+    Color color = get_color_for_index(bodyToPaint);
+    
+    int centerHalf = (g_grid_size-2*g_margin_size)/2;
+
+    Vector2 topOrigin = {
+        (g_grid_size-2*g_margin_size)/2,
+        g_grid_size-g_margin_size-centerHalf
+    };
+
+    // Top body
+    Rectangle top =  {
+        g_screen_padding.x + g_grid_size * (bodyToPaint->posX)+g_margin_size + centerHalf,
+        g_screen_padding.y + g_grid_size * (bodyToPaint->posY)+g_margin_size + centerHalf,
+        g_grid_size-2*g_margin_size,
+        g_grid_size-g_margin_size
+    };
+    DrawRectanglePro(top,topOrigin,rotation,color);
+
+    // Right body
+    Vector2 rightOrigin = {
+        centerHalf,
+        centerHalf
+    };
+    Rectangle right =  {
+        g_screen_padding.x + g_grid_size * (bodyToPaint->posX)+g_margin_size+centerHalf,
+        g_screen_padding.y + g_grid_size * (bodyToPaint->posY)+g_margin_size+centerHalf,
+        g_grid_size-g_margin_size,
+        g_grid_size-2*g_margin_size
+    };
+    DrawRectanglePro(right,rightOrigin,rotation,color);
+}
+
+// Draws a faulty body Piece
+void draw_body_error(SnakeBody* bodyToPaint) {
+    Vector2 topLeft =  {
+        g_grid_size * (bodyToPaint->posX),
+        g_grid_size * (bodyToPaint->posY)
+    };
+    Vector2 size =  {g_grid_size, g_grid_size};
+    DrawRectangleV(topLeft,size,GRAY);
+}
+
+// decides and draws the snake body in appropriate direction 
+void paint_snake_body_helper(SnakeBody* last, SnakeBody* bodyToPaint,SnakeBody* next) {
+    enum SnakeDirection dir_1 = get_snake_relative_direction(bodyToPaint,last);
+    enum SnakeDirection dir_2 = get_snake_relative_direction(bodyToPaint,next);
+
+    // Error case
+    if (dir_1 == dir_2) draw_body_error(bodyToPaint);
+    
+    // Standing
+    if (dir_1 == UP && dir_2 == DOWN) draw_body_standing(bodyToPaint);
+    if (dir_1 == DOWN && dir_2 == UP) draw_body_standing(bodyToPaint);
+    
+    // Sleeping
+    if (dir_1 == LEFT && dir_2 == RIGHT) draw_body_sleeping(bodyToPaint);
+    if (dir_1 == RIGHT && dir_2 == LEFT) draw_body_sleeping(bodyToPaint);
+    
+    // top right
+    if (dir_1 == DOWN && dir_2 == LEFT) draw_snake_right_angle(bodyToPaint,0);
+    if (dir_1 == LEFT && dir_2 == DOWN) draw_snake_right_angle(bodyToPaint,0);
+    
+    // top left
+    if (dir_1 == DOWN && dir_2 == RIGHT) draw_snake_right_angle(bodyToPaint,270);
+    if (dir_1 == RIGHT && dir_2 == DOWN) draw_snake_right_angle(bodyToPaint,270);
+    
+    // bottom left
+    if (dir_1 == UP && dir_2 == RIGHT) draw_snake_right_angle(bodyToPaint,180);
+    if (dir_1 == RIGHT && dir_2 == UP) draw_snake_right_angle(bodyToPaint,180);
+    
+    // bottom right
+    if (dir_1 == UP && dir_2 == LEFT) draw_snake_right_angle(bodyToPaint,90);
+    if (dir_1 == LEFT && dir_2 == UP) draw_snake_right_angle(bodyToPaint,90);
+}
+
+// returns a Vector2 pointer with updated 
+//    coordinates in the given direction 
+void move_snake_in_direction(enum SnakeDirection direction, Position oldPosition,Position* dest) {
+    dest->x = oldPosition.x;
+    dest->y = oldPosition.y;
+    switch (direction)
+    {
+    case UP:
+        dest->y -= 1;
+        break;
+    case RIGHT:
+        dest->x += 1;
+        break;
+    case DOWN:
+        dest->y += 1;
+        break;
+    default: // Implicitly right
+        dest->x -= 1;
+        break;
+    }
+}
+
+// Returns the coordinate as if the world is a sphere
+//  EAST-WEST loop and NORTH-SOUTH loop 
+int get_round_world_coordinate(int coord, int worldSize) {
+    if (coord < 0) {
+        return worldSize -1;
+    }
+    if (coord > worldSize-1) {
+        return 0;
+    }
+    return coord;
+}
+
+// Moves the snake by 1 cell in snake's direction
+void update_snake_position() {
+    
+    SnakeBody* current = SNAKE->head;
+    Position head_positon = {current->posX,current->posY};
+    Position* new_position = malloc(sizeof(struct Position));
+    move_snake_in_direction(SNAKE->direction,head_positon,new_position);
+    for (size_t i = 0; i < SNAKE->size; i++)
+    {   
+        Position temporary = {current->posX,current->posY};
+        
+        current->posX = get_round_world_coordinate(new_position->x,g_horizontal_grid_count);
+        current->posY = get_round_world_coordinate(new_position->y,g_vertical_grid_count);
+        
+        new_position->x = temporary.x;
+        new_position->y = temporary.y;
+
+        current = current->next;
+    }
+
+    if (SNAKE->increase_length) {
+        // Make new tail
+        SnakeBody* new_tail = malloc(sizeof(struct SnakeBody));
+        new_tail->next = NULL;
+        new_tail->posX = new_position->x;
+        new_tail->posY = new_position->y;
+        new_tail->index = SNAKE->tail->index + 1;
+
+        // update old tail
+        SnakeBody* old_tail = SNAKE->tail;
+        old_tail->next = new_tail;
+        
+        // Update snake
+        SNAKE->tail = new_tail;
+        SNAKE->size++;
+        SNAKE->increase_length = false;
+
+    }
+
+    SNAKE->direction_changed = false;
+    free(new_position);
+}
+
+// Periodically checks if the snake should be moved
+void move_snake_if_possible() {
+    if (GetTime() - g_last_snake_movement_time > g_snake_movement_time) {
+        update_snake_position();
+        if (g_score > 0) {
+            g_score--;
+        }
+        g_last_snake_movement_time = GetTime();
+    }
+}
+
+// changes  the direction of snake as given by enum 
+void change_snake_direction(enum SnakeDirection direction) {
+    if (!SNAKE->direction_changed) {
+        // Avoids setting reverse direction
+        switch (SNAKE->direction)
+        {
+        case UP:
+            if (direction == DOWN) return;
+            break;
+        case RIGHT:
+            if (direction == LEFT) return;
+            break;
+        case DOWN:
+            if (direction == UP) return;
+            break;
+        default:
+            if (direction == RIGHT) return;
+            break;
+        }
+        SNAKE->direction = direction;
+        SNAKE->direction_changed = true;
+    }
+}
+
+// Draws the food on scren
+void draw_food() {
+    Vector2 topLeft =  {
+        g_screen_padding.x + g_grid_size * (g_food.x)+g_grid_size/2,
+        g_screen_padding.y + g_grid_size * (g_food.y)+g_grid_size/2
+    };
+    DrawCircleV(topLeft,(g_grid_size/2)*0.7,RED);
+}
+
+// Checks if user input is received
+void handle_desktop_input() {
+    if (IsKeyPressed(KEY_W) ||
+        IsKeyPressed(KEY_UP)) {
+        change_snake_direction(UP);
+    }
+    if (IsKeyPressed(KEY_A) ||
+        IsKeyPressed(KEY_LEFT)) {
+        change_snake_direction(LEFT);
+    }
+    if (IsKeyPressed(KEY_S) ||
+        IsKeyPressed(KEY_DOWN)) {
+        change_snake_direction(DOWN);
+    }
+    if (IsKeyPressed(KEY_D) ||
+        IsKeyPressed(KEY_RIGHT)) {
+        change_snake_direction(RIGHT);
+    }
+    if (IsKeyPressed(KEY_SPACE)) {
+        g_game_state = PAUSE;
+    }
+}
+
+// Paints the snake head in correct direction based on
+//   next body piece
+void paint_snake_head(SnakeBody* head, SnakeBody* next) {
+    int head_margin_size = g_grid_size*g_head_margin_ratio;
+
+    Vector2 gridCentre =  {
+        g_screen_padding.x + g_grid_size * (head->posX) + g_grid_size/2,
+        g_screen_padding.y + g_grid_size * (head->posY) + g_grid_size/2
+    };
+
+    DrawCircle(
+        gridCentre.x,
+        gridCentre.y,
+        (g_grid_size-2*head_margin_size)/2,
+        g_snake_head_color
+    );
+    
+    Rectangle rect = {
+        gridCentre.x,
+        gridCentre.y,
+        g_grid_size-2*head_margin_size,
+        g_grid_size-head_margin_size-(g_grid_size-2*head_margin_size)/2,
+    };
+    Vector2 rectOrigin = {
+        (g_grid_size-2*head_margin_size)/2,
+        0
+    };
+    float rotation;
+    switch (get_snake_relative_direction(head,next))
+    {
+    case UP:
+        rotation = 0;
+        break;
+    case RIGHT:
+        rotation = 90;
+        break;
+    case DOWN:
+        rotation = 180;
+        break;
+    default: // LEFT assumed
+        rotation = 270;
+        break;
+    }
+    DrawRectanglePro(rect,rectOrigin,rotation,g_snake_head_color);
+}
+
+// Paints the tail of snake in correct direction based on
+//    second last body piece 
+void paint_snake_tail(SnakeBody* tail, SnakeBody* before) {
+
+    Color color = get_color_for_index(tail);
+
+    Vector2 gridCentre =  {
+        g_screen_padding.x + g_grid_size * (tail->posX) + g_grid_size/2,
+        g_screen_padding.y + g_grid_size * (tail->posY) + g_grid_size/2
+    };
+
+    DrawCircle(
+        gridCentre.x,
+        gridCentre.y,
+        (g_grid_size-2*g_margin_size)/2,
+        color
+    );
+    
+    Rectangle rect = {
+        gridCentre.x,
+        gridCentre.y,
+        g_grid_size-2*g_margin_size,
+        g_grid_size-g_margin_size-(g_grid_size-2*g_margin_size)/2,
+    };
+    Vector2 rectOrigin = {
+        (g_grid_size-2*g_margin_size)/2,
+        0
+    };
+    float rotation;
+    switch (get_snake_relative_direction(tail,before))
+    {
+    case UP:
+        rotation = 0;
+        break;
+    case RIGHT:
+        rotation = 90;
+        break;
+    case DOWN:
+        rotation = 180;
+        break;
+    default: // LEFT assumed
+        rotation = 270;
+        break;
+    }
+    DrawRectanglePro(rect,rectOrigin,rotation,color);
+}
+
+// Draws the entire snake on screen
+void draw_snake() {
+    struct SnakeBody* currentBody = SNAKE->head;
+    struct SnakeBody* lastBody = NULL;
+    for (size_t i = 0; i < SNAKE->size; i++)
+    {
+        if (i==0) {
+            paint_snake_head(currentBody,currentBody->next);
+        } else if (i==SNAKE->size-1) {
+            paint_snake_tail(currentBody,lastBody);
+        } else {
+            paint_snake_body_helper(lastBody,currentBody,currentBody->next);
+        }
+        lastBody = currentBody;
+        currentBody = currentBody->next;
+    }
 }
 
 // ===== Main functions =========
@@ -379,11 +770,14 @@ void draw_death() {
     DrawRectangle(bannerPadding,bannerPadding,g_screen_width-2*bannerPadding,g_screen_height-2*bannerPadding,Fade(RED,0.85));
 
     // SCORE display
-    char buffer[10];
-    char* score = &buffer[0];
-    sprintf(buffer, "SCORE: %d", g_score);
-    
-    draw_window_title(score);
+    char* buffer = (char*)malloc(20 * sizeof(char)); // Allocate enough space for the string
+    if (buffer != NULL) {
+        sprintf(buffer, "SCORE: %d", g_score);
+        draw_window_title(buffer);
+        free(buffer);
+    } else {
+        draw_window_title("SCORE ERROR");
+    }
 
     // back button
     Rectangle backButton = draw_button("BACK TO MENU",0);
@@ -473,26 +867,19 @@ void draw_playing() {
 
     ClearBackground(g_background_color);
 
-    drawgrid();
     drawWindowBorder();
+    drawgrid();
 
-    if (g_game_over) {
-
-        drawWindowBoxMarker();
-    
-    } else {
-        
-        move_snake();
-        if (check_food_eaten()) {
-            // Food eaten
-            place_new_food();
-            SNAKE->increase_length = true;
-            computeScore(SNAKE->size);
-        }
-        if (is_snake_dead()) {
-            g_game_over = true;
-            g_game_state = DEATH;
-        }
+    move_snake_if_possible();
+    if (check_food_eaten()) {
+        // Food eaten
+        place_new_food();
+        SNAKE->increase_length = true;
+        computeScore(SNAKE->size);
+    }
+    if (is_snake_dead()) {
+        g_game_over = true;
+        g_game_state = DEATH;
     }
 
     draw_snake();
@@ -502,186 +889,11 @@ void draw_playing() {
 #if defined(PLATFORM_WEB)
         handle_input();
 #else
-        handle_key_press();
+        handle_desktop_input();
 #endif
 }
 
 // ====== HELPER FUNCTIONS ======
-
-// paints a standing body
-void print_body_standing(SnakeBody* bodyToPaint) {
-    Vector2 topLeft =  {g_grid_size * (bodyToPaint->posX)+g_margin_size, g_grid_size * (bodyToPaint->posY)};
-    Vector2 size =  {g_grid_size-2*g_margin_size, g_grid_size};
-    
-    Color color = get_color_for_index(bodyToPaint);
-    DrawRectangleV(topLeft,size,color);
-}
-
-void print_body_sleeping(SnakeBody* bodyToPaint) {
-    Vector2 topLeft =  {g_grid_size * (bodyToPaint->posX), g_grid_size * (bodyToPaint->posY)+g_margin_size};
-    Vector2 size =  {g_grid_size, g_grid_size-2*g_margin_size};
-    
-    Color color = get_color_for_index(bodyToPaint);
-    DrawRectangleV(topLeft,size,color);
-}
-
-void print_body_up_right(SnakeBody* bodyToPaint) {
-    
-    Color color = get_color_for_index(bodyToPaint);
-    
-    // Main body
-    Vector2 topLeft =  {g_grid_size * (bodyToPaint->posX)+g_margin_size, g_grid_size * (bodyToPaint->posY)};
-    Vector2 size =  {g_grid_size-2*g_margin_size, g_grid_size-g_margin_size};
-    
-    DrawRectangleV(topLeft,size,color);
-
-    // FILL
-    Vector2 topLeftFill =  {topLeft.x + size.x, topLeft.y + g_margin_size};
-    Vector2 sizeFill =  {g_margin_size,g_grid_size-2*g_margin_size};
-    DrawRectangleV(topLeftFill,sizeFill,color);
-}
-
-void print_body_up_left(SnakeBody* bodyToPaint) {
-    Color color = get_color_for_index(bodyToPaint);
-    
-    // Main body
-    Vector2 topLeft =  {g_grid_size * (bodyToPaint->posX)+g_margin_size, g_grid_size * (bodyToPaint->posY)};
-    Vector2 size =  {g_grid_size-2*g_margin_size, g_grid_size-g_margin_size};
-    
-    DrawRectangleV(topLeft,size,color);
-
-    // FILL
-    Vector2 topLeftFill =  {g_grid_size * (bodyToPaint->posX), g_grid_size * (bodyToPaint->posY)+g_margin_size};
-    Vector2 sizeFill =  {g_margin_size,g_grid_size-2*g_margin_size};
-    DrawRectangleV(topLeftFill,sizeFill,color);
-}
-
-void print_body_down_left(SnakeBody* bodyToPaint) {
-    Color color = get_color_for_index(bodyToPaint);
-    
-    // Main body
-    Vector2 topLeft =  {g_grid_size * (bodyToPaint->posX)+g_margin_size, g_grid_size * (bodyToPaint->posY)+g_margin_size};
-    Vector2 size =  {g_grid_size-2*g_margin_size,g_grid_size-g_margin_size};
-    DrawRectangleV(topLeft,size,color);
-
-    Vector2 topLeftFill =  {g_grid_size * (bodyToPaint->posX), g_grid_size * (bodyToPaint->posY)+g_margin_size};
-    Vector2 sizeFill =  {g_margin_size, g_grid_size-2*g_margin_size};
-    DrawRectangleV(topLeftFill,sizeFill,color);
-}
-
-void print_body_down_right(SnakeBody* bodyToPaint) {
-    Color color = get_color_for_index(bodyToPaint);
-    
-    // Main body
-    Vector2 topLeft =  {g_grid_size * (bodyToPaint->posX)+g_margin_size, g_grid_size * (bodyToPaint->posY)+g_margin_size};
-    Vector2 size =  {g_grid_size-2*g_margin_size,g_grid_size-g_margin_size};
-    DrawRectangleV(topLeft,size,color);
-
-    Vector2 topLeftFill =  {topLeft.x+size.x, topLeft.y};
-    Vector2 sizeFill =  {g_margin_size, g_grid_size-2*g_margin_size};
-    DrawRectangleV(topLeftFill,sizeFill,color);
-}
-
-// Paints a single body piece on grid
-void paint_snake_body_helper(SnakeBody* last, SnakeBody* bodyToPaint,SnakeBody* next) {
-    enum SnakeDirection dir_1 = get_snake_relative_direction(bodyToPaint,last);
-    enum SnakeDirection dir_2 = get_snake_relative_direction(bodyToPaint,next);
-
-    // Error case
-    if (dir_1 == dir_2) print_error_body(bodyToPaint);
-    
-    // Standing
-    if (dir_1 == UP && dir_2 == DOWN) print_body_standing(bodyToPaint);
-    if (dir_1 == DOWN && dir_2 == UP) print_body_standing(bodyToPaint);
-    
-    // Sleeping
-    if (dir_1 == LEFT && dir_2 == RIGHT) print_body_sleeping(bodyToPaint);
-    if (dir_1 == RIGHT && dir_2 == LEFT) print_body_sleeping(bodyToPaint);
-    
-    // top right
-    if (dir_1 == DOWN && dir_2 == LEFT) print_body_up_right(bodyToPaint);
-    if (dir_1 == LEFT && dir_2 == DOWN) print_body_up_right(bodyToPaint);
-    
-    // top left
-    if (dir_1 == DOWN && dir_2 == RIGHT) print_body_up_left(bodyToPaint);
-    if (dir_1 == RIGHT && dir_2 == DOWN) print_body_up_left(bodyToPaint);
-    
-    // bottom left
-    if (dir_1 == UP && dir_2 == RIGHT) print_body_down_left(bodyToPaint);
-    if (dir_1 == RIGHT && dir_2 == UP) print_body_down_left(bodyToPaint);
-    
-    // bottom right
-    if (dir_1 == UP && dir_2 == LEFT) print_body_down_right(bodyToPaint);
-    if (dir_1 == LEFT && dir_2 == UP) print_body_down_right(bodyToPaint);
-
-}
-
-// Whenever a direction error is encountered, the body is painted with this
-void print_error_body(SnakeBody* bodyToPaint) {
-    Vector2 topLeft =  {g_grid_size * (bodyToPaint->posX), g_grid_size * (bodyToPaint->posY)};
-    Vector2 size =  {g_grid_size, g_grid_size};
-    DrawRectangleV(topLeft,size,GRAY);
-}
-
-// Paints the snake head
-void paint_snake_head_helper(SnakeBody* head, SnakeBody* next) {
-    g_margin_size -= 5;
-    Vector2 topLeft =  {g_grid_size * (head->posX)+g_margin_size,g_grid_size * (head->posY)+g_margin_size};
-    Vector2 size =  {g_grid_size-2*g_margin_size, g_grid_size-2*g_margin_size};
-    switch (get_snake_relative_direction(head,next))
-    {
-    case UP:
-        size.y += g_margin_size;
-        break;
-    case RIGHT:
-        topLeft.x -= g_margin_size;
-        size.x += g_margin_size;
-        break;
-    case DOWN:
-        topLeft.y -= g_margin_size;
-        size.y += g_margin_size;
-        break;
-    default: // LEFT by default
-        size.x += g_margin_size;
-        break;
-    }
-
-    DrawRectangleV(topLeft,size,g_snake_head_color);
-    g_margin_size += 5;
-}
-
-void paint_snake_tail_helper(SnakeBody* tail, SnakeBody* secondLast) {
-    int centerSize = g_grid_size-2*g_margin_size;
-    Vector2 topLeft =  {g_grid_size * (tail->posX)+g_margin_size, g_grid_size * (tail->posY)+g_margin_size};
-    Vector2 size =  {g_grid_size-2*g_margin_size, g_grid_size-2*g_margin_size};
-    Vector2 circleTopLeft = {g_grid_size * (tail->posX)+(g_grid_size/2),g_grid_size * (tail->posY)+(g_grid_size/2)};
-    switch (get_snake_relative_direction(tail,secondLast))
-    {
-    case UP:
-        topLeft.y += centerSize;
-        size.y = g_margin_size;
-        circleTopLeft.y += (centerSize/2);
-        break;
-    case RIGHT:
-        topLeft.x -= g_margin_size;
-        size.x = g_margin_size;
-        circleTopLeft.x -= (centerSize/2);
-        break;
-    case DOWN:
-        topLeft.y -= g_margin_size;
-        size.y = g_margin_size;
-        circleTopLeft.y -= (centerSize/2);
-        break;
-    default: // LEFT by default
-        topLeft.x += centerSize;
-        size.x = g_margin_size;
-        circleTopLeft.x += (centerSize/2);
-        break;
-    }
-    Color color = get_color_for_index(tail);
-    DrawRectangleV(topLeft,size,color);
-    DrawCircle(circleTopLeft.x,circleTopLeft.y,(g_grid_size-2*g_margin_size)/2,color);
-}
 
 // REQUIRES, first and second are at right angles
 // gives the direction of first relative to second
@@ -710,24 +922,6 @@ enum SnakeDirection get_snake_relative_direction(SnakeBody* first, SnakeBody* se
         return DOWN;  // due to world wrap
     }
     return UP;
-}
-
-// Draws the entire snake on screen
-void draw_snake() {
-    struct SnakeBody* currentBody = SNAKE->head;
-    struct SnakeBody* lastBody = NULL;
-    for (size_t i = 0; i < SNAKE->size; i++)
-    {
-        if (i==0) {
-            paint_snake_head_helper(currentBody,currentBody->next);
-        } else if (i==SNAKE->size-1) {
-            paint_snake_tail_helper(currentBody,lastBody);
-        } else {
-            paint_snake_body_helper(lastBody,currentBody,currentBody->next);
-        }
-        lastBody = currentBody;
-        currentBody = currentBody->next;
-    }
 }
 
 // Initializes global vars
@@ -771,197 +965,4 @@ void initialize_global_variables() {
     // Food
     SetRandomSeed(time(NULL));
     place_new_food();
-}
-
-// Checks if user input is received
-void handle_key_press() {
-    if (IsKeyPressed(KEY_W) ||
-        IsKeyPressed(KEY_UP) ||
-        IsGestureDetected(GESTURE_SWIPE_UP)) {
-        change_snake_direction(UP);
-    }
-    if (IsKeyPressed(KEY_A) ||
-        IsKeyPressed(KEY_LEFT) ||
-        IsGestureDetected(GESTURE_SWIPE_LEFT)) {
-        change_snake_direction(LEFT);
-    }
-    if (IsKeyPressed(KEY_S) ||
-        IsKeyPressed(KEY_DOWN) ||
-        IsGestureDetected(GESTURE_SWIPE_DOWN)) {
-        change_snake_direction(DOWN);
-    }
-    if (IsKeyPressed(KEY_D) ||
-        IsKeyPressed(KEY_RIGHT) ||
-        IsGestureDetected(GESTURE_SWIPE_RIGHT)) {
-        change_snake_direction(RIGHT);
-    }
-    if (IsKeyPressed(KEY_SPACE)) {
-        g_game_state = PAUSE;
-    }
-
-    // TEMPORARY !!!
-    if (IsKeyPressed(KEY_E)) {
-        SNAKE->increase_length = true;
-    }
-    if (IsKeyPressed(KEY_R)) {
-        place_new_food();
-    }
-}
-
-// Draws the food on scren
-void draw_food() {
-    Vector2 topLeft =  {g_grid_size * (g_food.x)+g_grid_size/2, g_grid_size * (g_food.y)+g_grid_size/2};
-    DrawCircleV(topLeft,(g_grid_size/2)*0.7,RED);
-}
-
-// changes  the direction of snake as given by enum 
-void change_snake_direction(enum SnakeDirection direction) {
-    if (!SNAKE->direction_changed) {
-        // Avoids setting reverse direction
-        switch (SNAKE->direction)
-        {
-        case UP:
-            if (direction == DOWN) return;
-            break;
-        case RIGHT:
-            if (direction == LEFT) return;
-            break;
-        case DOWN:
-            if (direction == UP) return;
-            break;
-        default:
-            if (direction == RIGHT) return;
-            break;
-        }
-        SNAKE->direction = direction;
-        SNAKE->direction_changed = true;
-    }
-}
-
-// Periodically checks if the snake should be moved
-void move_snake() {
-    if (GetTime() - g_last_snake_movement_time > g_snake_movement_time) {
-        update_snake();
-        if (g_score > 0) {
-            g_score--;
-        }
-        g_last_snake_movement_time = GetTime();
-    }
-}
-
-// moves the position of each snake body by 1 in the snake direction 
-void update_snake() {
-    
-    SnakeBody* current = SNAKE->head;
-    Position head_positon = {current->posX,current->posY};
-    Position* new_position = malloc(sizeof(struct Position));
-    get_updated_vector(SNAKE->direction,head_positon,new_position);
-    for (size_t i = 0; i < SNAKE->size; i++)
-    {   
-        Position temporary = {current->posX,current->posY};
-        
-        current->posX = round_world_coordinates(new_position->x,g_horizontal_grid_count);
-        current->posY = round_world_coordinates(new_position->y,g_vertical_grid_count);
-        
-        new_position->x = temporary.x;
-        new_position->y = temporary.y;
-
-        current = current->next;
-    }
-
-    if (SNAKE->increase_length) {
-        // Make new tail
-        SnakeBody* new_tail = malloc(sizeof(struct SnakeBody));
-        new_tail->next = NULL;
-        new_tail->posX = new_position->x;
-        new_tail->posY = new_position->y;
-        new_tail->index = SNAKE->tail->index + 1;
-
-        // update old tail
-        SnakeBody* old_tail = SNAKE->tail;
-        old_tail->next = new_tail;
-        
-        // Update snake
-        SNAKE->tail = new_tail;
-        SNAKE->size++;
-        SNAKE->increase_length = false;
-
-    }
-
-    SNAKE->direction_changed = false;
-    free(new_position);
-}
-
-// Returns the coordinate as if the world is a sphere and start,end loop
-int round_world_coordinates(int coord, int word_size) {
-    if (coord < 0) {
-        return word_size -1;
-    }
-    if (coord > word_size-1) {
-        return 0;
-    }
-    return coord;
-}
-
-// returns a Vector2 pointer with updated 
-//    coordinates in the given direction 
-void get_updated_vector(enum SnakeDirection direction, Position oldPosition,Position* dest) {
-    dest->x = oldPosition.x;
-    dest->y = oldPosition.y;
-    switch (direction)
-    {
-    case UP:
-        dest->y -= 1;
-        break;
-    case RIGHT:
-        dest->x += 1;
-        break;
-    case DOWN:
-        dest->y += 1;
-        break;
-    default: // Implicitly right
-        dest->x -= 1;
-        break;
-    }
-}
-
-// ====== OLD HELPERS ======
-// Draws the grid for snake game
-void drawgrid() {
-
-    // int columns = g_screen_width/g_grid_size;
-    // int rows = g_screen_height/g_grid_size;
-
-    for (size_t i = 0; i < g_horizontal_grid_count; i++)
-    {
-        Vector2 columnStart = {g_grid_size * i, 0};
-        Vector2 columnEnd = {g_grid_size * i, g_grid_size*g_vertical_grid_count};
-        DrawLineV(columnStart,columnEnd,g_grid_color);
-    }
-
-    for (size_t i = 0; i < g_vertical_grid_count; i++)
-    {
-        Vector2 rowStart = {0, g_grid_size * i};
-        Vector2 rowEnd = {g_horizontal_grid_count*g_grid_size, g_grid_size * i};
-        DrawLineV(rowStart,rowEnd,g_grid_color);
-    }
-}
-
-// makes a bounding box lines on viewport
-void drawWindowBoxMarker() {
-    DrawLine(0,0,g_screen_width,g_screen_height,RED);
-    DrawLine(g_screen_width,0,0,g_screen_height,RED);
-}
-
-// Makes Lines on viewport
-void drawWindowBorder() {
-    // int right_padding = g_screen_width - (g_horizontal_grid_count*g_grid_size);
-    // int bottom_padding = g_screen_height - (g_vertical_grid_count*g_grid_size);
-
-    DrawRectangleLines(g_screen_padding.x,g_screen_padding.y,g_screen_padding.width,g_screen_padding.height,g_border_color);
-
-    // DrawLine(0,0,g_screen_width-right_padding,0,g_border_color); // TOP
-    // DrawLine(0,g_screen_height-bottom_padding-1,g_screen_width-right_padding,g_screen_height-bottom_padding-1,g_border_color); // BOTTOM
-    // DrawLine(1,0,1,g_screen_height-bottom_padding,g_border_color); // LEFT
-    // DrawLine(g_screen_width-right_padding,0,g_screen_width-right_padding,g_screen_height-bottom_padding,g_border_color); // RIGHT
 }
