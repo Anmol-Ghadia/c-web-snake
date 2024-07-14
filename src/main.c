@@ -14,8 +14,8 @@ void change_snake_direction(enum SnakeDirection);
 // sets the touch input
 // used by external api
 void give_touch_input(int x, int y) {
-    g_extern_touch_x = x;
-    g_extern_touch_y = y;
+    g_extern_touch.x = x;
+    g_extern_touch.y = y;
 }
 // sets snake direction
 // used by external
@@ -46,8 +46,8 @@ void give_key_input(unsigned int dir) {
 // ====== HELPERS ========
 
 void resetInput() {
-    g_extern_touch_x = 0;
-    g_extern_touch_y = 0;
+    g_extern_touch.x = EXTERN_TOUCH_NONE;
+    g_extern_touch.y = EXTERN_TOUCH_NONE;
 }
 
 // Draws the grid for snake game
@@ -247,9 +247,8 @@ Rectangle draw_button(char *ptr_text,unsigned int index) {
 // works for both web and desktop 
 bool is_button_clicked(Rectangle button) {
 #if defined(PLATFORM_WEB)
-    if (g_extern_touch_x != 0 && g_extern_touch_y != 0) {
-        Vector2 point = {g_extern_touch_x,g_extern_touch_y};
-        if (CheckCollisionPointRec(point,button)) {
+    if (g_extern_touch.x != EXTERN_TOUCH_NONE && g_extern_touch.y != EXTERN_TOUCH_NONE) {
+        if (CheckCollisionPointRec(g_extern_touch,button)) {
             resetInput();
             return true;
         }
@@ -271,7 +270,7 @@ void draw_pause_button() {
 
     Rectangle pauseText;
     pauseText.y = g_margin_size + g_screen_padding.y;
-    pauseText.height = g_screen_height/16;
+    pauseText.height = GetScreenHeight()/16;
     pauseText.width = MeasureText((char *)&titleText,pauseText.height);
     pauseText.x = (g_screen_padding.x+g_screen_padding.width-g_margin_size-pauseText.width);
 
@@ -283,22 +282,21 @@ void draw_pause_button() {
 
 // Handles web input
 void handle_web_input() {
-    if (g_extern_touch_x == 0 && g_extern_touch_y == 0) return;
+    if (g_extern_touch.x == EXTERN_TOUCH_NONE && g_extern_touch.y == EXTERN_TOUCH_NONE) return;
 
-    Vector2 point = {g_extern_touch_x,g_extern_touch_y};
     Vector2 mid = {GetScreenWidth()/2,GetScreenHeight()/2};
     Vector2 topLeft = {0,0};
     Vector2 topRight = {GetScreenWidth(),0};
     Vector2 bottomRight = {GetScreenWidth(),GetScreenHeight()};
     Vector2 bottomLeft = {0,GetScreenHeight()};
 
-    if (CheckCollisionPointTriangle(point,topLeft,mid,topRight)) {
+    if (CheckCollisionPointTriangle(g_extern_touch,topLeft,mid,topRight)) {
         change_snake_direction(UP);
-    } else if (CheckCollisionPointTriangle(point,topRight,mid,bottomRight)) {
+    } else if (CheckCollisionPointTriangle(g_extern_touch,topRight,mid,bottomRight)) {
         change_snake_direction(RIGHT);
-    } else if (CheckCollisionPointTriangle(point,bottomRight,mid,bottomLeft)) {
+    } else if (CheckCollisionPointTriangle(g_extern_touch,bottomRight,mid,bottomLeft)) {
         change_snake_direction(DOWN);
-    } else if (CheckCollisionPointTriangle(point,bottomLeft,mid,topLeft)) {
+    } else if (CheckCollisionPointTriangle(g_extern_touch,bottomLeft,mid,topLeft)) {
         change_snake_direction(LEFT);
     }
     resetInput();
@@ -752,21 +750,13 @@ void init_snake() {
     SNAKE->tail = tail;
 }
 
-// TODO !!!
-// initializes the global variables to start a new game
-void init_playing_state() {
-    init_snake();
-    place_new_food();
-}
-
-// TODO !!!
-// Initializes global vars
-void init_global_variables() {
+// Recompute the spacings and grid size
+void compute_globals() {
     
-    // Vars
-    g_vertical_grid_count = g_screen_height/g_grid_size;
-    g_horizontal_grid_count = g_screen_width/g_grid_size;
+    // recompute global vargs
+    g_grid_size = MIN(GetScreenWidth()/g_horizontal_grid_count,GetScreenHeight()/g_vertical_grid_count);
     g_margin_size = ((double)g_grid_size)*g_margin_ratio;
+    
     int leftPadding = GetScreenWidth()-(g_grid_size*g_horizontal_grid_count);
     int topPadding = GetScreenHeight()-(g_grid_size*g_vertical_grid_count);
 
@@ -774,8 +764,19 @@ void init_global_variables() {
     g_screen_padding.y = topPadding/2;
     g_screen_padding.width = GetScreenWidth()-leftPadding;
     g_screen_padding.height = GetScreenHeight()-topPadding;
-    g_score = 0;
+}
 
+// initializes the global variables to start a new game
+void init_playing_state() {
+
+    g_score = 0;
+    compute_globals();
+    init_snake();
+    place_new_food();
+}
+
+// Initializes global vars
+void init_global_variables() {
     // Food
     SetRandomSeed(time(NULL));
 }
@@ -845,7 +846,7 @@ void draw_death() {
     // End game banner
     int bannerPadding = GetScreenHeight()/7;
 
-    DrawRectangle(bannerPadding,bannerPadding,g_screen_width-2*bannerPadding,g_screen_height-2*bannerPadding,Fade(RED,0.85));
+    DrawRectangle(bannerPadding,bannerPadding,GetScreenWidth()-2*bannerPadding,GetScreenHeight()-2*bannerPadding,Fade(RED,0.85));
 
     // SCORE display
     char* buffer = (char*)malloc(20 * sizeof(char)); // Allocate enough space for the string
@@ -898,21 +899,7 @@ void draw_playing() {
 void update_draw_frame(void)
 {
     if (IsWindowResized()) {
-        // New dimensions
-        g_screen_height = GetScreenHeight();
-        g_screen_width = GetScreenWidth();
-
-        // recompute global vargs
-        g_grid_size = MIN(g_screen_width/g_horizontal_grid_count,g_screen_height/g_vertical_grid_count);
-        g_margin_size = ((double)g_grid_size)*g_margin_ratio;
-        
-        int leftPadding = GetScreenWidth()-(g_grid_size*g_horizontal_grid_count);
-        int topPadding = GetScreenHeight()-(g_grid_size*g_vertical_grid_count);
-
-        g_screen_padding.x = leftPadding/2;
-        g_screen_padding.y = topPadding/2;
-        g_screen_padding.width = GetScreenWidth()-leftPadding;
-        g_screen_padding.height = GetScreenHeight()-topPadding;
+        compute_globals();
     }
     BeginDrawing();
     
@@ -940,7 +927,7 @@ int main(void)
 {
     SetGesturesEnabled(GESTURE_NONE);
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
-    InitWindow(g_screen_width, g_screen_height, "Classic Snake Game");
+    InitWindow(900, 600, "Classic Snake Game");
     init_global_variables();
 
 #if defined(PLATFORM_WEB)

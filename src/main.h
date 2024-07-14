@@ -13,15 +13,13 @@ const double g_margin_ratio = 0.35;
 const double g_head_margin_ratio = 0.30;
 
 // GLOBALS
-int g_extern_touch_x = 0;
-int g_extern_touch_y = 0;
-int g_screen_width = 900;
-int g_screen_height = 600;
+const int EXTERN_TOUCH_NONE = -1;
+Vector2 g_extern_touch = {EXTERN_TOUCH_NONE,EXTERN_TOUCH_NONE};
 int g_margin_size;
-int g_vertical_grid_count;
-int g_horizontal_grid_count;
+int g_vertical_grid_count = 9;
+int g_horizontal_grid_count = 12;
 double g_last_snake_movement_time = 0;
-int g_grid_size = 80;
+int g_grid_size;
 unsigned int g_score;
 enum GameState g_game_state = MENU;
 Position g_food = {0,0};
