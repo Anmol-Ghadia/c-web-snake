@@ -40,3 +40,16 @@ Find the Web version hosted here: [Demo](https://www.students.cs.ubc.ca/~aghadia
 1) ~~fix painting when snake is going offscreen and wrapping on opposite edge~~
 1) ~~add two triangles on corners instead of masking using fake square~~
 1) ~~Figure out window resizing~~
+
+
+emcc src/*.c -o bin/web/main.html -Wall -std=c99 -D_DEFAULT_SOURCE -Wno-missing-braces -Wunused-result -Os -I. -I D:/raylib/src -I D:/raylib/src/external -L. -L D:/raylib/src -s USE_GLFW=3 D:/raylib/src/web/libraylib.a -DPLATFORM_WEB -s EXPORTED_FUNCTIONS='["_main","_give_touch_input","_give_key_input","_pause_playing_game"]' -s EXPORTED_RUNTIME_METHODS=ccall,cwrap
+
+
+```sh
+sudo docker run \
+  --rm \
+  -v $(pwd):/src \
+  -u $(id -u):$(id -g) \
+  emscripten/emsdk \
+  emcc src/*.c -o bin/web/main.html -Wall -std=c99 -D_DEFAULT_SOURCE -Wno-missing-braces -Wunused-result -Os -I. -I include -L. -L include -s USE_GLFW=3 libWeb/libraylib.a -DPLATFORM_WEB -s EXPORTED_FUNCTIONS='["_main","_give_touch_input","_give_key_input","_pause_playing_game"]' -s EXPORTED_RUNTIME_METHODS=ccall,cwrap
+```
