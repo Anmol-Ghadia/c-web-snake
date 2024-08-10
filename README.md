@@ -53,3 +53,7 @@ sudo docker run \
   emscripten/emsdk \
   emcc src/*.c -o bin/web/main.html -Wall -std=c99 -D_DEFAULT_SOURCE -Wno-missing-braces -Wunused-result -Os -I. -I include -L. -L include -s USE_GLFW=3 libWeb/libraylib.a -DPLATFORM_WEB -s EXPORTED_FUNCTIONS='["_main","_give_touch_input","_give_key_input","_pause_playing_game"]' -s EXPORTED_RUNTIME_METHODS=ccall,cwrap
 ```
+
+```sh
+$ ./build.sh
+```
