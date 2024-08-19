@@ -42,17 +42,3 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v4
       
-#   deploy_project:
-#     needs: compile_project
-    
-#     environment:
-#       name: github-pages
-
-#     runs-on: ubuntu-latest
-
-#     steps:
-#       - name: Checkout
-#         uses: actions/checkout@v4
-#         with:
-#           ref: gh-pages
-
