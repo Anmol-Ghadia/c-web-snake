@@ -1,5 +1,4 @@
-coverage
-bin/desktop/**.*
-bin/web/**.*
-.vscode
+bin
+build
+
 src/**.o
