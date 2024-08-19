@@ -1,6 +1,6 @@
 # Snake Game
 ![GitHub Actions Pages Deployment Workflow Status](https://img.shields.io/github/actions/workflow/status/Anmol-Ghadia/c-web-snake/gh-pages.yml?label=Deployment%20Build)
-![Main Branch Deployment](https://img.shields.io/website?url=https%3A%2F%2Fanmol-ghadia.github.io%2Fc-web-snake%2F&up_message=Live&up_color=brightgreen&down_message=down&down_color=red&label=View%20Demo&link=https%3A%2F%2Fanmol-ghadia.github.io%2Fc-web-snake%2F)
+[![Main Branch Deployment](https://img.shields.io/website?url=https%3A%2F%2Fanmol-ghadia.github.io%2Fc-web-snake%2F&up_message=Live&up_color=brightgreen&down_message=down&down_color=red&label=View%20Demo&link=https%3A%2F%2Fanmol-ghadia.github.io%2Fc-web-snake%2F)](https://anmol-ghadia.github.io/c-web-snake/)
 
 
 This repository contains a simple implementation of the classic Snake game, developed in C and compiled to [WebAssembly](https://webassembly.org/) using the Emscripten toolchain. The game supports both touch and keyboard input and features a dark/light mode toggle.
